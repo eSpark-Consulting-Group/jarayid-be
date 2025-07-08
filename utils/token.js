@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { configs } from '../config/config.js';
 
 /**
  * Generate a signed JWT token for the given payload.
@@ -7,7 +8,7 @@ import jwt from 'jsonwebtoken';
  * @returns {string} JWT token string
  */
 const generateToken = (payload, expiresIn = '7d') => {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
+    return jwt.sign(payload, configs.JWT_SECRET_KEY, { expiresIn });
 };
 
 export default generateToken;

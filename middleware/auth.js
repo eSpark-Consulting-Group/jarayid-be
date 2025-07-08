@@ -1,18 +1,20 @@
 import jwt from 'jsonwebtoken';
+import { configs } from '../config/config.js';
 import { PrismaClient } from '@prisma/client';
 import response from '../utils/response.js';
 const prisma = new PrismaClient();
 
-const auth = async (req, res, next) => {
+// Verify JWT token and attach user to req
+const jwtGuard = async (req, res, next) => {
     try {
         const token = req.header('Authorization')?.replace('Bearer ', '');
-        
+
         if (!token) {
             return response.unauthorized(res, 'No token provided');
         }
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, configs.JWT_SECRET_KEY);
             const user = await prisma.user.findUnique({
                 where: { id: decoded.userId }
             });
@@ -31,22 +33,17 @@ const auth = async (req, res, next) => {
     }
 };
 
-// Admin authentication middleware
-const adminAuth = async (req, res, next) => {
-    try {
-        await auth(req, res, async () => {
-            if (req.user.isAdmin) {
-                next();
-            } else {
-                response.unauthorized(res, 'Admin access required');
-            }
-        });
-    } catch (error) {
-        response.error(res, 'Authentication error', 500);
+const roleGuard = (roles = []) => (req, res, next) => {
+    if (!req.user) {
+        return response.unauthorized(res, 'Authentication required');
     }
+    if (roles.length === 0 || roles.includes(req.user.role)) {
+        return next();
+    }
+    return response.unauthorized(res, 'Access denied');
 };
 
 export default {
-    auth,
-    adminAuth
+    jwtGuard,
+    roleGuard
 };

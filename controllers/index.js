@@ -1,2 +1,4 @@
 // Centralised export for all controllers
-export { signup, login } from './userController.js';
+import UserController from './userController.js';
+
+export default UserController;

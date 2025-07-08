@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { configs } from './config/config.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -13,7 +14,7 @@ import schemas from './schemas/index.js';
 import apiRouter from './routes/index.js';
 
 const validation = validate(schemas);
-const { singleUpload, multiUpload, handleUploadError } = upload;
+const { singleUpload, multiUpload } = upload;
 
 // Winston logger configuration
 const logger = winston.createLogger({
@@ -25,7 +26,7 @@ const logger = winston.createLogger({
     ]
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (configs.NODE_ENV !== 'production') {
     logger.add(new winston.transports.Console({
         format: winston.format.simple()
     }));
@@ -65,7 +66,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = configs.PORT || 3000;
 app.listen(PORT, async () => {
     try {
         await prisma.$connect();

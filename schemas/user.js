@@ -33,19 +33,6 @@ const userSchema = {
             .max(30)
             .pattern(/^[a-zA-Z\s]+$/)
             .messages(messages),
-        email: Joi.string()
-            .email({ minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'io'] } })
-            .messages(messages),
-        password: Joi.string()
-            .min(8)
-            .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/)
-            .messages(messages),
-        confirmPassword: Joi.string()
-            .valid(Joi.ref('password'))
-            .messages({
-                'any.only': 'Password confirmation does not match',
-                ...messages
-            })
     }),
     login: Joi.object({
         email: Joi.string()
