@@ -35,24 +35,27 @@ enum AdType {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  name            Json
-  email           String    @unique
-  password        String
-  role            UserRole  @default(USER)
-  isSocialLogin   Boolean   @default(false)
-  loginType       String?
-  isBanned        Boolean   @default(false)
-  image           String?   @db.VarChar(500)
-  imageKey        String?   @db.VarChar(500)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  comments        Comment[]
-  contacts        Contact[]                     
-  favorites       Favorite[]
-  readLater       ReadLater[]
-  subscriptions   Subscription[]
-  articles        Article[]
+  id                    String    @id @default(uuid())
+  name                  Json
+  email                 String    @unique
+  password              String
+  role                  UserRole  @default(USER)
+  isSocialLogin         Boolean   @default(false)
+  loginType             String?
+  isBanned              Boolean   @default(false)
+  image                 String?   @db.VarChar(500)
+  imageKey              String?   @db.VarChar(500)
+  resetPasswordToken    String?   @db.VarChar(500)
+  resetPasswordExpires  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  comments              Comment[]
+  contacts              Contact[]                     
+  favorites             Favorite[]
+  readLater             ReadLater[]
+  subscriptions         Subscription[]
+  articles              Article[]
+  categories            Category[]
 
   @@map("users")
 }
@@ -67,6 +70,8 @@ model Category {
   description     String?
   seoMeta         Json
   thresholdDays   Int
+  createdById    String
+  createdBy      User      @relation(fields: [createdById], references: [id])
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   rssFeeds        RSSFeed[]         

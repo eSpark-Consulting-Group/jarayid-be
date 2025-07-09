@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
-import { response, generateToken } from '../utils/index.js';
+import { response, generateToken,generateHashedPassword } from '../utils/index.js';
+import { cloudinaryService, emailService, passwordResetService } from '../services/index.js';
 
 const prisma = new PrismaClient();
 
@@ -35,8 +36,7 @@ class UserController {
             let hashedPassword = null;
             let isSocialLogin = false;
             if (loginType === 'local') {
-                const salt = await bcrypt.genSalt(10);
-                hashedPassword = await bcrypt.hash(password, salt);
+                hashedPassword = await generateHashedPassword(password);
             } else {
                 isSocialLogin = true;
             }
@@ -53,7 +53,6 @@ class UserController {
         }
     }
 
-    // User login controller
     async login(req, res) {
         const { email, password, loginType = 'local' } = req.body;
 
@@ -111,18 +110,44 @@ class UserController {
         }
     }
 
-    // Update user profile (excluding password changes)
     async update(req, res) {
         const id = req.user.id;
-        const allowedFields = ['name', 'email'];
+        const allowedFields = ['name'];
         const data = {};
         allowedFields.forEach((key) => {
             if (req.body[key] !== undefined) data[key] = req.body[key];
         });
-        if (Object.keys(data).length === 0) {
+        if (!req.file && Object.keys(data).length === 0) {
             return response.error(res, 'No valid fields provided for update', 400);
         }
         try {
+            const existingUser = await prisma.user.findUnique({ where: { id } });
+            if (!existingUser) {
+                return response.notFound(res, 'User not found');
+            }
+
+            if (req.file) {
+                if (existingUser.imageKey) {
+                    try {
+                        await cloudinaryService.deleteFile(existingUser.imageKey);
+                    } catch (deleteError) {
+                        console.error('Failed to delete old user image from Cloudinary:', deleteError);
+                    }
+                }
+                try {
+                    const imageData = await cloudinaryService.uploadImage(
+                        req.file.buffer,
+                        req.file.originalname,
+                        'users'
+                    );
+                    data.image = imageData.url;
+                    data.imageKey = imageData.key;
+                } catch (uploadError) {
+                    console.error('User image upload error:', uploadError);
+                    return response.error(res, 'Failed to upload new image', 400);
+                }
+            }
+
             const user = await prisma.user.update({ where: { id }, data });
             return response.success(res, { user }, 'User updated successfully');
         } catch (error) {
@@ -131,6 +156,166 @@ class UserController {
                 return response.notFound(res, 'User not found');
             }
             return response.error(res, 'User update failed', 500, error.message);
+        }
+    }
+
+    async forgotPassword(req, res) {
+        const { email } = req.body;
+
+        try {
+            const user = await prisma.user.findUnique({ where: { email } });
+            if (!user) {
+                return response.success(res, null, 'If this email is registered, you will receive a password reset link');
+            }
+
+            if (user.isSocialLogin && !user.password) {
+                return response.error(res, 'This account uses social login. Password reset is not available', 400);
+            }
+
+            const resetToken = passwordResetService.generateResetToken();
+            const expirationTime = passwordResetService.calculateExpirationTime();
+            
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    resetPasswordToken: resetToken,
+                    resetPasswordExpires: expirationTime,
+                },
+            });
+
+            const resetLink = passwordResetService.generateResetLink({
+                userId: user.id,
+                email: user.email,
+                resetToken,
+            });
+
+            await emailService.sendForgotPasswordEmail({
+                email: user.email,
+                userName: typeof user.name === 'string' ? user.name : user.name.en || user.name.ar || 'User',
+                resetLink,
+                expirationTime: passwordResetService.getExpirationDisplayTime(),
+            });
+
+            return response.success(res, null, 'Password reset link sent to your email');
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            return response.error(res, 'Failed to process forgot password request', 500, error.message);
+        }
+    }
+
+    async verifyResetToken(req, res) {
+        const { token } = req.query;
+
+        try {
+            const decoded = passwordResetService.verifyResetJWT(token);
+            const { userId, email, resetToken } = decoded;
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    email: true,
+                    resetPasswordToken: true,
+                    resetPasswordExpires: true,
+                },
+            });
+
+            if (!user) {
+                return response.error(res, 'Invalid reset token', 400);
+            }
+
+            if (user.resetPasswordToken !== resetToken) {
+                return response.error(res, 'Invalid reset token', 400);
+            }
+
+            if (passwordResetService.isTokenExpired(user.resetPasswordExpires)) {
+                return response.error(res, 'Reset token has expired', 400);
+            }
+
+            if (user.email !== email) {
+                return response.error(res, 'Invalid reset token', 400);
+            }
+
+            return response.success(res, { valid: true }, 'Reset token is valid');
+        } catch (error) {
+            console.error('Verify reset token error:', error);
+            if (error.message.includes('expired') || error.message.includes('invalid')) {
+                return response.error(res, error.message, 400);
+            }
+            return response.error(res, 'Failed to verify reset token', 500, error.message);
+        }
+    }
+
+    async resetPassword(req, res) {
+        const { token, newPassword } = req.body;
+
+        try {
+            const decoded = passwordResetService.verifyResetJWT(token);
+            const { userId, email, resetToken } = decoded;
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    resetPasswordToken: true,
+                    resetPasswordExpires: true,
+                },
+            });
+
+            if (!user) {
+                return response.error(res, 'Invalid reset token', 400);
+            }
+
+            if (user.resetPasswordToken !== resetToken) {
+                return response.error(res, 'Invalid reset token', 400);
+            }
+
+            if (passwordResetService.isTokenExpired(user.resetPasswordExpires)) {
+                return response.error(res, 'Reset token has expired', 400);
+            }
+
+            if (user.email !== email) {
+                return response.error(res, 'Invalid reset token', 400);
+            }
+
+            // Hash new password
+            const hashedPassword = await generateHashedPassword(newPassword);
+
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    password: hashedPassword,
+                    resetPasswordToken: null,
+                    resetPasswordExpires: null,
+                },
+            });
+
+            try {
+                await emailService.sendPasswordResetSuccessEmail({
+                    email: user.email,
+                    userName: typeof user.name === 'string' ? user.name : user.name.en || user.name.ar || 'User',
+                    resetDate: new Date().toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    }),
+                });
+            } catch (emailError) {
+                console.error('Failed to send password reset confirmation email:', emailError);
+            }
+
+            return response.success(res, null, 'Password reset successfully');
+        } catch (error) {
+            console.error('Reset password error:', error);
+            if (error.message.includes('expired') || error.message.includes('invalid')) {
+                return response.error(res, error.message, 400);
+            }
+            return response.error(res, 'Failed to reset password', 500, error.message);
         }
     }
 }

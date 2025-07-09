@@ -26,3 +26,27 @@ export const bcryptConfig = {
     salt: Number(getEnv('SALT'))
 };
 
+export const CLOUD_CONFIG = {
+  apiKey: getEnv("CLOUD_API_KEY"),
+  apiSecret: getEnv("CLOUD_SECRET"),
+  cloudName: getEnv("CLOUD_NAME"),
+  folder: getEnv("CLOUD_FOLDER"),
+};
+
+export const PASSWORD_RESET_CONFIG = {
+  secret: getEnv("PASSWORD_RESET_SECRET"),
+  expirationTime: getEnv("PASSWORD_RESET_EXPIRATION") || "1h", // 1 hour default
+  frontendUrl: getEnv("FRONTEND_URL") || "http://localhost:3000",
+};
+
+export const MAILER_CONFIG = {
+  host: getEnv("SMTP_HOST"),
+  port: Number(getEnv("SMTP_PORT")),
+  secure: Boolean(getEnv("SMTP_SECURE")),
+  service: getEnv("SMTP_SERVICE"),
+  pass: getEnv("SMTP_PASS"),
+  from: getEnv("SMTP_FROM"),
+};
+
+
+
