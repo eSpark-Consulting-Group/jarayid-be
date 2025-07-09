@@ -1,0 +1,184 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Status {
+  ARCHIVE
+  DRAFT
+  PUBLISH
+}
+
+enum CategoryType {
+  COUNTRY
+  NORMAL
+  MEDIA
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum AdPlatform {
+  WEB
+  MOBILE
+}
+
+enum AdType {
+  GOOGLE_ADS
+  AD_MOB
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            Json
+  email           String    @unique
+  password        String
+  role            UserRole  @default(USER)
+  isSocialLogin   Boolean   @default(false)
+  loginType       String?
+  isBanned        Boolean   @default(false)
+  image           String?   @db.VarChar(500)
+  imageKey        String?   @db.VarChar(500)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  comments        Comment[]
+  contacts        Contact[]                     
+  favorites       Favorite[]
+  readLater       ReadLater[]
+  subscriptions   Subscription[]
+  articles        Article[]
+
+  @@map("users")
+}
+
+model Category {
+  id              String    @id @default(uuid())
+  name            String    @db.VarChar(500)
+  type            CategoryType
+  logo            String?   @db.VarChar(500)
+  logoKey         String?   @db.VarChar(500)
+  videoUrl        String?   @db.VarChar(500)
+  description     String?
+  seoMeta         Json
+  thresholdDays   Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  rssFeeds        RSSFeed[]         
+  articles        Article[]
+
+  @@map("categories")
+}
+
+model RSSFeed {
+  id              String    @id @default(uuid())
+  url             String    @db.VarChar(500)
+  categoryId      String
+  category        Category  @relation(fields: [categoryId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("rss_feeds")
+}
+
+model Article {
+  id              String    @id @default(uuid())
+  title           String    @db.VarChar(500)
+  url             String    @db.VarChar(500)
+  source          String    @db.VarChar(500)
+  originalContent Json
+  summaryArabic   String?
+  summaryEnglish  String?
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  pinned          Boolean   @default(false)
+  viewCount       Int       @default(0)
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  comments        Comment[]
+  favorites       Favorite[]
+  readLater       ReadLater[]
+  author          User      @relation(fields: [userId], references: [id])
+  userId          String
+
+  @@map("articles")
+}
+
+model Comment {
+  id              String    @id @default(uuid())
+  articleId       String
+  article         Article   @relation(fields: [articleId], references: [id])
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  content         String
+  isDeleted       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@map("comments")
+}
+
+model Contact {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  name            String    @db.VarChar(500)
+  email           String    @db.VarChar(500)
+  message         String
+  isResponded     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@map("contacts")
+}
+
+model Favorite {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  articleId       String
+  article         Article   @relation(fields: [articleId], references: [id])
+  createdAt       DateTime  @default(now())
+
+  @@map("favorites")
+}
+
+model ReadLater {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  articleId       String
+  article         Article   @relation(fields: [articleId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("read_later")
+}
+
+model Subscription {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  isPremium       Boolean
+  trialEndsAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+model Ad {
+  id              String    @id @default(uuid())
+  platform        AdPlatform
+  adType          AdType
+  location        String    @db.VarChar(100)
+  isEnabled       Boolean
+  revenue         Float
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("ads")
+}
