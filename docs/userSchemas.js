@@ -35,6 +35,9 @@
  *           type: string
  *           format: uri
  *           description: User profile image URL
+ *         country:
+ *           type: string
+ *           description: User's country
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -100,8 +103,13 @@
  *           type: string
  *           format: binary
  *           description: User profile image file (multipart/form-data)
+ *         country:
+ *           type: string
+ *           maxLength: 100
+ *           description: User's country
  *       example:
  *         name: "Jane Doe"
+ *         country: "United States"
  *         image: (binary file)
  *     ForgotPasswordRequest:
  *       type: object
@@ -163,4 +171,22 @@
  *             token:
  *               type: string
  *               description: JWT authentication token
+ *     SetPasswordRequest:
+ *       type: object
+ *       properties:
+ *         currentPassword:
+ *           type: string
+ *           minLength: 8
+ *           description: Current password for verification
+ *         newPassword:
+ *           type: string
+ *           minLength: 8
+ *           description: New password (must contain uppercase, lowercase, number, and special character)
+ *           pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]'
+ *       required:
+ *         - currentPassword
+ *         - newPassword
+ *       example:
+ *         currentPassword: "OldPassword123!"
+ *         newPassword: "NewPassword123!"
  */

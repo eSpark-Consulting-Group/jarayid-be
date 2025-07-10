@@ -41,6 +41,9 @@ const userSchema = {
             .max(30)
             .pattern(/^[a-zA-Z\s]+$/)
             .messages(messages),
+        country: Joi.string()
+            .max(100)
+            .messages(messages),
     }),
     login: Joi.object({
         email: Joi.string()
@@ -67,6 +70,20 @@ const userSchema = {
     }),
     resetPassword: Joi.object({
         token: Joi.string()
+            .required()
+            .messages(messages),
+        newPassword: Joi.string()
+            .min(8)
+            .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+            .messages({
+                ...messages,
+                'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+            })
+            .required()
+    }),
+    setPassword: Joi.object({
+        currentPassword: Joi.string()
+            .min(8)
             .required()
             .messages(messages),
         newPassword: Joi.string()

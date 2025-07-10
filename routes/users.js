@@ -92,12 +92,17 @@ router.get('/profile', auth, userController.getProfile);
  *                 minLength: 3
  *                 maxLength: 30
  *                 description: User's full name
+ *               country:
+ *                 type: string
+ *                 maxLength: 100
+ *                 description: User's country
  *               image:
  *                 type: string
  *                 format: binary
  *                 description: User profile image file
  *           example:
  *             name: "Jane Doe"
+ *             country: "United States"
  *             image: (binary file)
  *     responses:
  *       200: { description: User updated }
@@ -235,5 +240,56 @@ router.get('/verify-reset-token', validation.user.verifyResetToken, userControll
  *         description: Internal server error
  */
 router.post('/reset-password', validation.user.resetPassword, userController.resetPassword);
+
+/**
+ * @swagger
+ * /users/set-password:
+ *   post:
+ *     summary: Change password from profile settings (requires authentication)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Current password for verification
+ *                 example: "OldPassword123!"
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password (must contain uppercase, lowercase, number, and special character)
+ *                 example: "NewPassword123!"
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Password updated successfully"
+ *       400:
+ *         description: Current password incorrect or validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/set-password', auth, validation.user.setPassword, userController.setPassword);
 
 export default router;

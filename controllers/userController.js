@@ -95,6 +95,7 @@ class UserController {
                     role: true,
                     isBanned: true,
                     image: true,
+                    country: true,
                     loginType: true,
                     createdAt: true,
                     updatedAt: true
@@ -112,7 +113,7 @@ class UserController {
 
     async update(req, res) {
         const id = req.user.id;
-        const allowedFields = ['name'];
+        const allowedFields = ['name', 'country'];
         const data = {};
         allowedFields.forEach((key) => {
             if (req.body[key] !== undefined) data[key] = req.body[key];
@@ -316,6 +317,66 @@ class UserController {
                 return response.error(res, error.message, 400);
             }
             return response.error(res, 'Failed to reset password', 500, error.message);
+        }
+    }
+
+    async setPassword(req, res) {
+        const userId = req.user.id;
+        const { currentPassword, newPassword } = req.body;
+
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    email: true,
+                    password: true,
+                    isSocialLogin: true,
+                    name: true,
+                },
+            });
+
+            if (!user) {
+                return response.notFound(res, 'User not found');
+            }
+
+            if (user.isSocialLogin && !user.password) {
+                return response.error(res, 'Password cannot be set for social login accounts without existing password', 400);
+            }
+
+            const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+            if (!isCurrentPasswordValid) {
+                return response.error(res, 'Current password is incorrect', 400);
+            }
+
+            const hashedNewPassword = await generateHashedPassword(newPassword);
+
+            await prisma.user.update({
+                where: { id: userId },
+                data: { password: hashedNewPassword },
+            });
+
+            try {
+                await emailService.sendPasswordResetSuccessEmail({
+                    email: user.email,
+                    userName: typeof user.name === 'string' ? user.name : user.name.en || user.name.ar || 'User',
+                    resetDate: new Date().toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    }),
+                });
+            } catch (emailError) {
+                console.error('Failed to send password change confirmation email:', emailError);
+            }
+
+            return response.success(res, null, 'Password updated successfully');
+        } catch (error) {
+            console.error('Set password error:', error);
+            return response.error(res, 'Failed to update password', 500, error.message);
         }
     }
 }
