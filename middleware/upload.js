@@ -1,33 +1,15 @@
 import multer from 'multer';
-import fs from 'fs';
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import response from '../utils/response.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Configure multer with memory storage for Cloudinary
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    // Allow images and videos
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
         cb(null, true);
     } else {
-        cb(new Error('Only image files are allowed!'));
+        cb(new Error('Only image and video files are allowed!'));
     }
 };
 
@@ -35,18 +17,65 @@ const upload = multer({
     storage,
     fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 10 * 1024 * 1024 // 10MB limit
     }
 });
 
 // Single file upload middleware
-const singleUpload = (fieldName = 'image') => {
-    return upload.single(fieldName);
+const singleUpload = (fieldName = 'logo') => {
+    return (req, res, next) => {
+        upload.single(fieldName)(req, res, (err) => {
+            if (err) {
+                if (err instanceof multer.MulterError) {
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return response.error(res, 'File too large. Maximum size is 10MB', 400);
+                    }
+                    return response.error(res, `Upload error: ${err.message}`, 400);
+                }
+                return response.error(res, err.message, 400);
+            }
+            next();
+        });
+    };
 };
 
 // Multiple files upload middleware
 const multiUpload = (fieldName = 'images', maxCount = 5) => {
-    return upload.array(fieldName, maxCount);
+    return (req, res, next) => {
+        upload.array(fieldName, maxCount)(req, res, (err) => {
+            if (err) {
+                if (err instanceof multer.MulterError) {
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return response.error(res, 'One or more files are too large. Maximum size is 10MB per file', 400);
+                    }
+                    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+                        return response.error(res, `Too many files. Maximum ${maxCount} files allowed`, 400);
+                    }
+                    return response.error(res, `Upload error: ${err.message}`, 400);
+                }
+                return response.error(res, err.message, 400);
+            }
+            next();
+        });
+    };
+};
+
+// Fields upload middleware for multiple fields
+const fieldsUpload = (fields) => {
+    return (req, res, next) => {
+        upload.fields(fields)(req, res, (err) => {
+            if (err) {
+                if (err instanceof multer.MulterError) {
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return response.error(res, 'File too large. Maximum size is 10MB', 400);
+                    }
+                    return response.error(res, `Upload error: ${err.message}`, 400);
+                }
+                return response.error(res, err.message, 400);
+            }
+            next();
+        });
+    };
 };
 
 // Middleware to handle upload errors
@@ -60,5 +89,6 @@ const handleUploadError = (req, res, next) => {
 export default {
     singleUpload,
     multiUpload,
+    fieldsUpload,
     handleUploadError
 };

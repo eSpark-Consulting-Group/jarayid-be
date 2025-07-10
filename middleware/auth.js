@@ -40,10 +40,14 @@ const roleGuard = (roles = []) => (req, res, next) => {
     if (roles.length === 0 || roles.includes(req.user.role)) {
         return next();
     }
-    return response.unauthorized(res, 'Access denied');
+    return response.error(res, 'Access denied - Insufficient permissions', 403);
 };
 
 export default {
     jwtGuard,
     roleGuard
 };
+
+export const auth = jwtGuard;
+export const adminAuth = roleGuard(['ADMIN']);
+export const userAuth = roleGuard(['USER', 'ADMIN']);
