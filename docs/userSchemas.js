@@ -11,18 +11,22 @@
  *           description: Unique identifier for the user
  *         name:
  *           type: string
- *           description: User's full name
- *           minLength: 3
- *           maxLength: 30
+ *           description: User's full name (optional for social login)
+ *           minLength: 2
+ *           maxLength: 100
  *         email:
  *           type: string
  *           format: email
  *           description: User's email address
  *         loginType:
  *           type: string
- *           enum: [local, google, github]
+ *           enum: [local, google, github, facebook, apple]
  *           default: local
  *           description: Type of login method
+ *         socialId:
+ *           type: string
+ *           description: Social login provider ID (required for social login)
+ *           maxLength: 500
  *         isSocialLogin:
  *           type: boolean
  *           description: Whether user registered via social login
@@ -45,32 +49,38 @@
  *           type: string
  *           format: date-time
  *       required:
- *         - name
  *         - email
  *     UserSignup:
  *       type: object
  *       properties:
  *         name:
  *           type: string
- *           description: User's full name
- *           minLength: 3
- *           maxLength: 30
- *           pattern: '^[a-zA-Z\\s]+$'
+ *           description: User's full name (optional)
+ *           minLength: 2
+ *           maxLength: 100
  *         email:
  *           type: string
  *           format: email
  *           description: User's email address
  *         loginType:
  *           type: string
- *           enum: [local, google, github]
+ *           enum: [local, google, github, facebook, apple]
  *           default: local
  *           description: Type of login method
  *         password:
  *           type: string
  *           minLength: 8
  *           description: Password (required for local login only)
+ *         socialId:
+ *           type: string
+ *           maxLength: 500
+ *           description: Social login provider ID (required for social login)
+ *         image:
+ *           type: string
+ *           format: uri
+ *           maxLength: 500
+ *           description: Profile image URL (optional, typically from social login)
  *       required:
- *         - name
  *         - email
  *     UserLogin:
  *       type: object

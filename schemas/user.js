@@ -13,17 +13,16 @@ const messages = {
 const userSchema = {
     create: Joi.object({
         name: Joi.string()
-            .min(3)
-            .max(30)
-            .pattern(/^[a-zA-Z\s]+$/)
+            .min(2)
+            .max(100)
             .messages(messages)
-            .required(),
+            .optional(), // Made optional
         email: Joi.string()
-            .email({ minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'io'] } })
+            .email({ minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'io', 'edu', 'gov', 'co'] } })
             .messages(messages)
             .required(),
         loginType: Joi.string()
-            .valid('local', 'google', 'github')
+            .valid('local', 'google', 'github', 'facebook', 'apple')
             .default('local')
             .messages(messages),
         password: Joi.string()
@@ -32,8 +31,21 @@ const userSchema = {
             .when('loginType', {
                 is: 'local',
                 then: Joi.required(),
-                otherwise: Joi.forbidden()
-            })
+                otherwise: Joi.optional()
+            }),
+        socialId: Joi.string()
+            .max(500)
+            .messages(messages)
+            .when('loginType', {
+                is: 'local',
+                then: Joi.forbidden(),
+                otherwise: Joi.required()
+            }),
+        image: Joi.string()
+            .uri()
+            .max(500)
+            .messages(messages)
+            .optional() // Optional image URL for social login
     }),
     update: Joi.object({
         name: Joi.string()

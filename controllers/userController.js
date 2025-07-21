@@ -34,39 +34,90 @@ class UserController {
 
     // User registration & social signup/login controller
     async signup(req, res) {
-        const { name, email, password, loginType = 'local' } = req.body;
+        const { name, email, password, loginType = 'local', socialId, image } = req.body;
 
         try {
-            // Check if user already exists
+            // Validate required fields based on login type
+            if (loginType === 'local') {
+                if (!password) {
+                    return response.error(res, 'Password is required for local signup', 400);
+                }
+            } else {
+                // For social login, socialId is required
+                if (!socialId) {
+                    return response.error(res, 'Social ID is required for social login', 400);
+                }
+            }
+
+            // Check if user already exists by email
             const existingUser = await prisma.user.findUnique({ where: { email } });
             if (existingUser) {
                 if (!existingUser.isSocialLogin) {
                     return response.error(res, 'Email is already registered', 409);
                 }
                 if (loginType !== 'local') {
-                    if (!existingUser.image || existingUser.password) {
-                        return response.error(res, 'Email already registered', 409);
+                    // For social login, check if it's the same social provider
+                    if (existingUser.loginType === loginType) {
+                        const token = generateToken({ userId: existingUser.id, email: existingUser.email });
+                        return response.success(res, { user: existingUser, token }, 'User logged in successfully');
                     }
-                    const token = generateToken({ userId: existingUser.id, email: existingUser.email });
-                    return response.success(res, { user: existingUser, token }, 'User Socially logged in successfully');
+                    return response.error(res, 'Email already registered with different social provider', 409);
                 }
                 return response.error(res, 'Email already registered via social login', 409);
             }
 
+            // For social login, also check if socialId already exists
+            if (loginType !== 'local' && socialId) {
+                const existingSocialUser = await prisma.user.findFirst({
+                    where: {
+                        socialId: socialId,
+                        loginType: loginType
+                    }
+                });
+                
+                if (existingSocialUser) {
+                    const token = generateToken({ userId: existingSocialUser.id, email: existingSocialUser.email });
+                    return response.success(res, { user: existingSocialUser, token }, 'User logged in successfully');
+                }
+            }
+
             let hashedPassword = null;
             let isSocialLogin = false;
+            
             if (loginType === 'local') {
                 hashedPassword = await generateHashedPassword(password);
             } else {
                 isSocialLogin = true;
             }
 
+            // Prepare user data
+            const userData = {
+                name: name || null, // Make name optional
+                email,
+                password: hashedPassword,
+                isSocialLogin,
+                loginType,
+                socialId: socialId || null,
+                image: image || null // Store social login image URL
+            };
+
             const user = await prisma.user.create({
-                data: { name, email, password: hashedPassword, isSocialLogin, loginType }
+                data: userData,
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    loginType: true,
+                    image: true,
+                    socialId: true,
+                    isSocialLogin: true,
+                    role: true,
+                    createdAt: true
+                }
             });
 
             const token = generateToken({ userId: user.id, email: user.email });
-            return response.success(res, { user: { id: user.id, name: user.name, email: user.email, loginType: user.loginType }, token }, 'User registered successfully');
+            return response.success(res, { user, token }, 'User registered successfully');
         } catch (error) {
             logger.error('Signup error:', { error: error?.message || error });
             return response.error(res, 'Signup failed', 500, error.message);
