@@ -3,6 +3,26 @@ import { PrismaClient } from '@prisma/client';
 
 import { response, generateToken,generateHashedPassword } from '../utils/index.js';
 import { cloudinaryService, emailService, passwordResetService } from '../services/index.js';
+import winston from 'winston';
+
+
+// Logger configuration
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return `${timestamp} [${level.toUpperCase()}] user Controller: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        })
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'combined.log' }),
+        new winston.transports.Console({
+            format: winston.format.simple()
+        })
+    ]
+});
 
 const prisma = new PrismaClient();
 
@@ -48,7 +68,7 @@ class UserController {
             const token = generateToken({ userId: user.id, email: user.email });
             return response.success(res, { user: { id: user.id, name: user.name, email: user.email, loginType: user.loginType }, token }, 'User registered successfully');
         } catch (error) {
-            console.error('Signup error:', error);
+            logger.error('Signup error:', { error: error?.message || error });
             return response.error(res, 'Signup failed', 500, error.message);
         }
     }
@@ -79,7 +99,7 @@ class UserController {
             const token = generateToken({ userId: user.id, email: user.email });
             return response.success(res, { user, token }, 'Logged in successfully');
         } catch (error) {
-            console.error('Login error:', error);
+            logger.error('Login error:', { error: error?.message || error });
             return response.error(res, 'Login failed', 500, error.message);
         }
     }
@@ -106,7 +126,7 @@ class UserController {
             }
             return response.success(res, { user }, 'Profile fetched successfully');
         } catch (error) {
-            console.error('Get profile error:', error);
+            logger.error('Get profile error:', { error: error?.message || error });
             return response.error(res, 'Failed to fetch profile', 500, error.message);
         }
     }
@@ -132,7 +152,7 @@ class UserController {
                     try {
                         await cloudinaryService.deleteFile(existingUser.imageKey);
                     } catch (deleteError) {
-                        console.error('Failed to delete old user image from Cloudinary:', deleteError);
+                        logger.error('Failed to delete old user image from Cloudinary:', { error: deleteError?.message || deleteError });
                     }
                 }
                 try {
@@ -144,7 +164,7 @@ class UserController {
                     data.image = imageData.url;
                     data.imageKey = imageData.key;
                 } catch (uploadError) {
-                    console.error('User image upload error:', uploadError);
+                    logger.error('User image upload error:', { error: uploadError?.message || uploadError });
                     return response.error(res, 'Failed to upload new image', 400);
                 }
             }
@@ -152,7 +172,7 @@ class UserController {
             const user = await prisma.user.update({ where: { id }, data });
             return response.success(res, { user }, 'User updated successfully');
         } catch (error) {
-            console.error('Update user error:', error);
+            logger.error('Update user error:', { error: error?.message || error });
             if (error.code === 'P2025') {
                 return response.notFound(res, 'User not found');
             }
@@ -199,7 +219,7 @@ class UserController {
 
             return response.success(res, null, 'Password reset link sent to your email');
         } catch (error) {
-            console.error('Forgot password error:', error);
+            logger.error('Forgot password error:', { error: error?.message || error });
             return response.error(res, 'Failed to process forgot password request', 500, error.message);
         }
     }
@@ -239,7 +259,7 @@ class UserController {
 
             return response.success(res, { valid: true }, 'Reset token is valid');
         } catch (error) {
-            console.error('Verify reset token error:', error);
+            logger.error('Verify reset token error:', { error: error?.message || error });
             if (error.message.includes('expired') || error.message.includes('invalid')) {
                 return response.error(res, error.message, 400);
             }
@@ -307,12 +327,12 @@ class UserController {
                     }),
                 });
             } catch (emailError) {
-                console.error('Failed to send password reset confirmation email:', emailError);
+                logger.error('Failed to send password reset confirmation email:', { error: emailError?.message || emailError });
             }
 
             return response.success(res, null, 'Password reset successfully');
         } catch (error) {
-            console.error('Reset password error:', error);
+            logger.error('Reset password error:', { error: error?.message || error });
             if (error.message.includes('expired') || error.message.includes('invalid')) {
                 return response.error(res, error.message, 400);
             }
@@ -370,12 +390,12 @@ class UserController {
                     }),
                 });
             } catch (emailError) {
-                console.error('Failed to send password change confirmation email:', emailError);
+                logger.error('Failed to send password change confirmation email:', { error: emailError?.message || emailError });
             }
 
             return response.success(res, null, 'Password updated successfully');
         } catch (error) {
-            console.error('Set password error:', error);
+            logger.error('Set password error:', { error: error?.message || error });
             return response.error(res, 'Failed to update password', 500, error.message);
         }
     }
