@@ -23,7 +23,7 @@ const validation = createValidationMiddleware(userSchema);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name,email]
+ *             required: [email]
  *             properties:
  *               name:  { type: string }
  *               email: { type: string, format: email }
