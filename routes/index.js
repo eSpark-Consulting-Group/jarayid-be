@@ -5,6 +5,7 @@ import usersRouter from './users.js';
 import categoriesRouter from './categories.js';
 import rssFeedsRouter from './rssFeeds.js';
 import articlesRouter from './articles.js';
+import aiSummaryRouter from './aiSummary.js';
 
 // User related routes
 router.use('/users', usersRouter);
@@ -17,5 +18,8 @@ router.use('/rss-feeds', rssFeedsRouter);
 
 // Articles related routes
 router.use('/articles', articlesRouter);
+
+// AI Summary related routes
+router.use('/ai-summary', aiSummaryRouter);
 
 export default router;

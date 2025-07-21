@@ -277,6 +277,93 @@ class AISummaryQueueService {
     }
 
     /**
+     * Get job status by ID
+     * @param {string} jobId - Job ID
+     * @returns {Promise<Object|null>} Job status object
+     */
+    async getJobStatus(jobId) {
+        try {
+            if (!this.queue) {
+                throw new Error('Queue not initialized');
+            }
+
+            const job = await this.queue.getJob(jobId);
+            
+            if (!job) {
+                return null;
+            }
+
+            const state = await job.getState();
+            
+            return {
+                id: job.id,
+                name: job.name,
+                data: job.data,
+                progress: job.progress(),
+                state,
+                createdAt: new Date(job.timestamp),
+                processedOn: job.processedOn ? new Date(job.processedOn) : null,
+                finishedOn: job.finishedOn ? new Date(job.finishedOn) : null,
+                failedReason: job.failedReason,
+                returnvalue: job.returnvalue
+            };
+        } catch (error) {
+            logger.error('Error getting job status:', { jobId, error: error.message });
+            return null;
+        }
+    }
+
+    /**
+     * Get recent jobs by status
+     * @param {string} status - Job status (waiting, active, completed, failed)
+     * @param {number} limit - Number of jobs to return
+     * @returns {Promise<Array>} Recent jobs
+     */
+    async getRecentJobs(status = 'completed', limit = 10) {
+        try {
+            if (!this.queue) {
+                throw new Error('Queue not initialized');
+            }
+
+            let jobs = [];
+            
+            switch (status) {
+                case 'waiting':
+                    jobs = await this.queue.getWaiting(0, limit - 1);
+                    break;
+                case 'active':
+                    jobs = await this.queue.getActive(0, limit - 1);
+                    break;
+                case 'completed':
+                    jobs = await this.queue.getCompleted(0, limit - 1);
+                    break;
+                case 'failed':
+                    jobs = await this.queue.getFailed(0, limit - 1);
+                    break;
+                case 'delayed':
+                    jobs = await this.queue.getDelayed(0, limit - 1);
+                    break;
+                default:
+                    throw new Error(`Unknown job status: ${status}`);
+            }
+
+            return jobs.map(job => ({
+                id: job.id,
+                name: job.name,
+                data: job.data,
+                progress: job.progress(),
+                createdAt: new Date(job.timestamp),
+                processedOn: job.processedOn ? new Date(job.processedOn) : null,
+                finishedOn: job.finishedOn ? new Date(job.finishedOn) : null,
+                returnvalue: job.returnvalue
+            }));
+        } catch (error) {
+            logger.error('Error getting recent jobs:', { status, limit, error: error.message });
+            return [];
+        }
+    }
+
+    /**
      * Clean old jobs from the queue
      * @returns {Promise<Object>} Cleanup result
      */

@@ -23,56 +23,140 @@ const logger = winston.createLogger({
 
 class WebScraperService {
     /**
-     * Fetch HTML content from URL
+     * Get random user agent to avoid detection
+     * @returns {string} Random user agent string
+     */
+    getRandomUserAgent() {
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        ];
+        return userAgents[Math.floor(Math.random() * userAgents.length)];
+    }
+
+    /**
+     * Add random delay to avoid rate limiting
+     * @param {number} min - Minimum delay in ms
+     * @param {number} max - Maximum delay in ms
+     */
+    async randomDelay(min = 1000, max = 3000) {
+        const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    /**
+     * Fetch HTML content from URL with enhanced anti-detection
      * @param {string} url - The URL to fetch
+     * @param {number} retryCount - Current retry attempt
      * @returns {Promise<string>} HTML content
      */
-    async fetchHTML(url) {
-        return new Promise((resolve, reject) => {
-            const client = url.startsWith('https://') ? https : http;
-            
-            const options = {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
-                },
-                timeout: 30000
-            };
-
-            const req = client.get(url, options, (res) => {
-                // Handle redirects
-                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    logger.info(`Following redirect from ${url} to ${res.headers.location}`);
-                    return this.fetchHTML(res.headers.location).then(resolve).catch(reject);
+    async fetchHTML(url, retryCount = 0) {
+        const maxRetries = 3;
+        
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Add delay between requests to avoid rate limiting
+                if (retryCount > 0) {
+                    await this.randomDelay(2000, 5000);
                 }
 
-                if (res.statusCode !== 200) {
-                    reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
-                    return;
+                const client = url.startsWith('https://') ? https : http;
+                const parsedUrl = new URL(url);
+                
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    port: parsedUrl.port,
+                    path: parsedUrl.pathname + parsedUrl.search,
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': this.getRandomUserAgent(),
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Sec-Fetch-User': '?1',
+                        'Cache-Control': 'max-age=0',
+                        'Referer': `https://${parsedUrl.hostname}/`
+                    },
+                    timeout: 30000
+                };
+
+                const req = client.request(options, (res) => {
+                    // Handle redirects
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                        logger.info(`Following redirect from ${url} to ${res.headers.location}`);
+                        return this.fetchHTML(res.headers.location, retryCount).then(resolve).catch(reject);
+                    }
+
+                    // Handle different status codes
+                    if (res.statusCode === 403) {
+                        const error = new Error(`HTTP ${res.statusCode}: Forbidden - Anti-bot protection detected`);
+                        if (retryCount < maxRetries) {
+                            logger.warn(`🔄 Retrying request ${retryCount + 1}/${maxRetries} for ${url}`);
+                            return this.fetchHTML(url, retryCount + 1).then(resolve).catch(reject);
+                        }
+                        reject(error);
+                        return;
+                    }
+
+                    if (res.statusCode !== 200) {
+                        const error = new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`);
+                        if (retryCount < maxRetries && [429, 502, 503, 504].includes(res.statusCode)) {
+                            logger.warn(`🔄 Retrying request ${retryCount + 1}/${maxRetries} for ${url} (Status: ${res.statusCode})`);
+                            return this.fetchHTML(url, retryCount + 1).then(resolve).catch(reject);
+                        }
+                        reject(error);
+                        return;
+                    }
+
+                    let data = '';
+                    res.setEncoding('utf8');
+                    res.on('data', chunk => {
+                        data += chunk;
+                    });
+
+                    res.on('end', () => {
+                        resolve(data);
+                    });
+                });
+
+                req.on('error', (err) => {
+                    if (retryCount < maxRetries) {
+                        logger.warn(`🔄 Retrying request ${retryCount + 1}/${maxRetries} for ${url} (Error: ${err.message})`);
+                        return this.fetchHTML(url, retryCount + 1).then(resolve).catch(reject);
+                    }
+                    reject(err);
+                });
+
+                req.on('timeout', () => {
+                    req.destroy();
+                    const error = new Error('Request timeout');
+                    if (retryCount < maxRetries) {
+                        logger.warn(`🔄 Retrying request ${retryCount + 1}/${maxRetries} for ${url} (Timeout)`);
+                        return this.fetchHTML(url, retryCount + 1).then(resolve).catch(reject);
+                    }
+                    reject(error);
+                });
+
+                req.setTimeout(30000);
+                req.end();
+
+            } catch (error) {
+                if (retryCount < maxRetries) {
+                    logger.warn(`🔄 Retrying request ${retryCount + 1}/${maxRetries} for ${url} (Error: ${error.message})`);
+                    return this.fetchHTML(url, retryCount + 1).then(resolve).catch(reject);
                 }
-
-                let data = '';
-                res.setEncoding('utf8');
-                res.on('data', chunk => {
-                    data += chunk;
-                });
-
-                res.on('end', () => {
-                    resolve(data);
-                });
-            });
-
-            req.on('error', reject);
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('Request timeout'));
-            });
-
-            req.setTimeout(30000);
+                reject(error);
+            }
         });
     }
 
@@ -275,6 +359,57 @@ class WebScraperService {
         ];
 
         return !unscrappablePatterns.some(pattern => pattern.test(url));
+    }
+
+    /**
+     * Get content with fallback for difficult sites
+     * @param {string} url - Article URL
+     * @param {Object} fallbackData - RSS data to use if scraping fails
+     * @returns {Promise<string>} Content for AI processing
+     */
+    async getContentWithFallback(url, fallbackData = {}) {
+        try {
+            // Try normal scraping first
+            return await this.getContentForAI(url);
+        } catch (error) {
+            logger.warn(`❌ Primary scraping failed for ${url}, creating fallback content:`, { error: error.message });
+            
+            // Create content from available RSS data
+            let fallbackContent = '';
+            
+            if (fallbackData.title) {
+                fallbackContent += `Title: ${fallbackData.title}\n\n`;
+            }
+            
+            if (fallbackData.description) {
+                fallbackContent += `Description: ${fallbackData.description}\n\n`;
+            }
+            
+            if (fallbackData.content) {
+                fallbackContent += `Content:\n${fallbackData.content}`;
+            }
+            
+            // If we have minimal content, still return it
+            if (fallbackContent.trim().length > 50) {
+                logger.info(`📋 Using fallback content (${fallbackContent.length} characters) for ${url}`);
+                return {
+                    content: fallbackContent,
+                    originalData: {
+                        url,
+                        metadata: fallbackData,
+                        textContent: fallbackContent,
+                        contentLength: fallbackContent.length,
+                        scrapedAt: new Date().toISOString(),
+                        fallbackUsed: true
+                    },
+                    isComplete: false,
+                    isFallback: true
+                };
+            }
+            
+            // If no usable content, re-throw the error
+            throw error;
+        }
     }
 }
 

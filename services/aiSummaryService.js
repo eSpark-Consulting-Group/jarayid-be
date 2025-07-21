@@ -145,11 +145,37 @@ class AISummaryService {
                         
                         logger.info(`✅ Scraped ${contentForAI.length} characters for AI processing`);
                     } catch (scrapeError) {
-                        logger.warn(`⚠️ Failed to scrape ${article.url}, using original content:`, { error: scrapeError.message });
+                        logger.warn(`⚠️ Failed to scrape ${article.url}:`, { 
+                            error: scrapeError.message,
+                            url: article.url,
+                            articleId: article.id
+                        });
+                        
+                        // Categorize the error type for better tracking
+                        let errorType = 'unknown';
+                        if (scrapeError.message.includes('403') || scrapeError.message.includes('Forbidden')) {
+                            errorType = 'blocked';
+                            logger.warn(`🚫 Anti-bot protection detected for ${article.url} - this is normal for some sites`);
+                        } else if (scrapeError.message.includes('timeout')) {
+                            errorType = 'timeout';
+                            logger.warn(`⏰ Request timeout for ${article.url} - site may be slow`);
+                        } else if (scrapeError.message.includes('404')) {
+                            errorType = 'not_found';
+                            logger.warn(`🔍 Article not found at ${article.url} - may have been moved or deleted`);
+                        } else if (scrapeError.message.includes('500') || scrapeError.message.includes('502') || scrapeError.message.includes('503')) {
+                            errorType = 'server_error';
+                            logger.warn(`🔧 Server error for ${article.url} - site may have technical issues`);
+                        }
+                        
+                        // Fallback to original RSS content (this is the correct behavior!)
                         contentForAI = this.getOriginalContentText(article);
+                        logger.info(`📄 Using fallback RSS content (${contentForAI.length} characters) - error type: ${errorType}`);
+                        
+                        // Track scraping failures for analytics (optional)
+                        this.trackScrapingFailure(article.url, errorType, scrapeError.message);
                     }
                 } else {
-                    logger.info(`📄 Using original RSS content for article ${article.id}`);
+                    logger.info(`📄 Using original RSS content for article ${article.id} (URL not scrapable or missing)`);
                     contentForAI = this.getOriginalContentText(article);
                 }
 
@@ -342,6 +368,23 @@ class AISummaryService {
     }
 
     /**
+     * Track scraping failures for analytics
+     * @param {string} url - Failed URL
+     * @param {string} errorType - Type of error
+     * @param {string} errorMessage - Error message
+     */
+    trackScrapingFailure(url, errorType, errorMessage) {
+        // This could be expanded to store in database for analytics
+        logger.debug(`📊 Scraping failure tracked: ${url} - ${errorType}`, {
+            url,
+            errorType,
+            errorMessage,
+            domain: new URL(url).hostname,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    /**
      * Get statistics about articles needing summaries
      * @returns {Promise<Object>} Statistics
      */
@@ -416,6 +459,95 @@ class AISummaryService {
             needsProcessing: Math.max(missingEnglish, missingArabic),
             completionRate: totalArticles > 0 ? Math.round(((totalArticles - Math.max(missingEnglish, missingArabic)) / totalArticles) * 100) : 0
         };
+    }
+
+    /**
+     * Get scraping success statistics by domain
+     * @returns {Promise<Object>} Scraping statistics
+     */
+    async getScrapingStats() {
+        try {
+            // Get articles with scraped content vs those without
+            const articlesWithUrls = await prisma.article.findMany({
+                where: {
+                    AND: [
+                        { url: { not: null } },
+                        { url: { not: '' } }
+                    ]
+                },
+                select: {
+                    url: true,
+                    originalContent: true
+                }
+            });
+
+            const domainStats = {};
+            let totalWithUrls = 0;
+            let successfulScrapes = 0;
+
+            for (const article of articlesWithUrls) {
+                totalWithUrls++;
+                
+                try {
+                    const domain = new URL(article.url).hostname;
+                    
+                    if (!domainStats[domain]) {
+                        domainStats[domain] = {
+                            total: 0,
+                            scraped: 0,
+                            failed: 0
+                        };
+                    }
+                    
+                    domainStats[domain].total++;
+                    
+                    // Check if article has scraped content
+                    const hasScrapedContent = article.originalContent?.scrapedContent?.textContent;
+                    
+                    if (hasScrapedContent) {
+                        domainStats[domain].scraped++;
+                        successfulScrapes++;
+                    } else {
+                        domainStats[domain].failed++;
+                    }
+                } catch (error) {
+                    // Invalid URL, skip
+                    continue;
+                }
+            }
+
+            // Calculate success rates for each domain
+            Object.keys(domainStats).forEach(domain => {
+                const stats = domainStats[domain];
+                stats.successRate = stats.total > 0 ? Math.round((stats.scraped / stats.total) * 100) : 0;
+            });
+
+            // Sort by total articles descending
+            const sortedDomains = Object.entries(domainStats)
+                .sort(([,a], [,b]) => b.total - a.total)
+                .slice(0, 10); // Top 10 domains
+
+            return {
+                overall: {
+                    totalWithUrls,
+                    successfulScrapes,
+                    failedScrapes: totalWithUrls - successfulScrapes,
+                    overallSuccessRate: totalWithUrls > 0 ? Math.round((successfulScrapes / totalWithUrls) * 100) : 0
+                },
+                byDomain: Object.fromEntries(sortedDomains),
+                topDomains: sortedDomains.map(([domain, stats]) => ({
+                    domain,
+                    ...stats
+                }))
+            };
+        } catch (error) {
+            logger.error('Error getting scraping stats:', error);
+            return {
+                overall: { error: error.message },
+                byDomain: {},
+                topDomains: []
+            };
+        }
     }
 }
 
