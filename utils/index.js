@@ -3,5 +3,6 @@ import response from './response.js';
 import generateToken from './token.js';
 import pagination from './pagination.js';
 import { generateHashedPassword } from './password.js';
+import RSSFeedChecker from './rssFeedChecker.js';
 
-export { response, generateToken, pagination, generateHashedPassword };
+export { response, generateToken, pagination, generateHashedPassword, RSSFeedChecker };

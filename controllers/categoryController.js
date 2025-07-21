@@ -1,6 +1,26 @@
 import { PrismaClient } from '@prisma/client';
 import { response, pagination } from '../utils/index.js';
 import { cloudinaryService } from '../services/index.js';
+import winston from 'winston';
+
+
+// Logger configuration
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return `${timestamp} [${level.toUpperCase()}] category Controller: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        })
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'combined.log' }),
+        new winston.transports.Console({
+            format: winston.format.simple()
+        })
+    ]
+});
 
 const prisma = new PrismaClient();
 
@@ -36,7 +56,7 @@ class CategoryController {
                         'categories'
                     );
                 } catch (uploadError) {
-                    console.error('Logo upload error:', uploadError);
+                    logger.error('Logo upload error:', { error: uploadError?.message || uploadError });
                     return response.error(res, 'Failed to upload logo', 400);
                 }
             }
@@ -71,7 +91,7 @@ class CategoryController {
 
             return response.success(res, category, 'Category created successfully', 201);
         } catch (error) {
-            console.error('Create category error:', error);
+            logger.error('Create category error:', { error: error?.message || error });
             return response.error(res, 'Failed to create category', 500);
         }
     }
@@ -134,7 +154,7 @@ class CategoryController {
 
             return response.success(res, paginatedData, 'Categories retrieved successfully');
         } catch (error) {
-            console.error('Get categories error:', error);
+            logger.error('Get categories error:', { error: error?.message || error });
             return response.error(res, 'Failed to retrieve categories', 500);
         }
     }
@@ -168,7 +188,7 @@ class CategoryController {
 
             return response.success(res, category, 'Category retrieved successfully');
         } catch (error) {
-            console.error('Get category error:', error);
+            logger.error('Get category error:', { error: error?.message || error });
             return response.error(res, 'Failed to retrieve category', 500);
         }
     }
@@ -227,7 +247,7 @@ class CategoryController {
                     updateData.logo = logoData.url;
                     updateData.logoKey = logoData.key;
                 } catch (uploadError) {
-                    console.error('Logo upload error:', uploadError);
+                    logger.error('Logo upload error:', { error: uploadError?.message || uploadError });
                     return response.error(res, 'Failed to upload new logo', 400);
                 }
             }
@@ -248,7 +268,7 @@ class CategoryController {
 
             return response.success(res, category, 'Category updated successfully');
         } catch (error) {
-            console.error('Update category error:', error);
+            logger.error('Update category error:', { error: error?.message || error });
             return response.error(res, 'Failed to update category', 500);
         }
     }
@@ -281,7 +301,7 @@ class CategoryController {
                 try {
                     await cloudinaryService.deleteFile(existingCategory.logoKey);
                 } catch (deleteError) {
-                    console.error('Failed to delete logo from cloudinary:', deleteError);
+                    logger.error('Failed to delete logo from cloudinary:', { error: deleteError?.message || deleteError });
                 }
             }
 
@@ -291,7 +311,7 @@ class CategoryController {
 
             return response.success(res, null, 'Category deleted successfully');
         } catch (error) {
-            console.error('Delete category error:', error);
+            logger.error('Delete category error:', { error: error?.message || error });
             return response.error(res, 'Failed to delete category', 500);
         }
     }

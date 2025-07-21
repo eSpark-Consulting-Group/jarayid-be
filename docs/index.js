@@ -4,6 +4,8 @@
 export const schemaPaths = [
     './docs/userSchemas.js',
     './docs/categorySchemas.js', 
+    './docs/rssFeedSchemas.js',
+    './docs/articleSchemas.js',
     './docs/commonSchemas.js'
 ];
 

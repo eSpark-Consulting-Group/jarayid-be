@@ -12,6 +12,7 @@ import { response } from './utils/index.js';
 import { auth, adminAuth, upload, validate } from './middleware/index.js';
 import schemas from './schemas/index.js';
 import apiRouter from './routes/index.js';
+import { rssQueueService, aiSummaryQueueService } from './services/index.js';
 
 const validation = validate(schemas);
 const { singleUpload, multiUpload } = upload;
@@ -71,6 +72,25 @@ app.listen(PORT, async () => {
     try {
         await prisma.$connect();
         logger.info('Database connected');
+        
+        // Initialize RSS Queue Service
+        try {
+            await rssQueueService.initialize();
+            logger.info('RSS Queue Service initialized');
+        } catch (queueError) {
+            logger.error('RSS Queue Service initialization failed:', queueError);
+            // Continue without queue service if Redis is not available
+        }
+        
+        // Initialize AI Summary Queue Service
+        try {
+            await aiSummaryQueueService.initialize();
+            logger.info('AI Summary Queue Service initialized');
+        } catch (aiQueueError) {
+            logger.error('AI Summary Queue Service initialization failed:', aiQueueError);
+            // Continue without AI queue service if initialization fails
+        }
+        
         logger.info(`Server is running on port ${PORT}`);
     } catch (error) {
         logger.error('Database connection error:', error);
@@ -80,6 +100,43 @@ app.listen(PORT, async () => {
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    
+    try {
+        await rssQueueService.shutdown();
+        logger.info('RSS Queue Service shutdown complete');
+    } catch (error) {
+        logger.error('Error shutting down RSS Queue Service:', error);
+    }
+    
+    try {
+        await aiSummaryQueueService.shutdown();
+        logger.info('AI Summary Queue Service shutdown complete');
+    } catch (error) {
+        logger.error('Error shutting down AI Summary Queue Service:', error);
+    }
+    
+    await prisma.$disconnect();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    
+    try {
+        await rssQueueService.shutdown();
+        logger.info('RSS Queue Service shutdown complete');
+    } catch (error) {
+        logger.error('Error shutting down RSS Queue Service:', error);
+    }
+    
+    try {
+        await aiSummaryQueueService.shutdown();
+        logger.info('AI Summary Queue Service shutdown complete');
+    } catch (error) {
+        logger.error('Error shutting down AI Summary Queue Service:', error);
+    }
+    
     await prisma.$disconnect();
     process.exit(0);
 });
