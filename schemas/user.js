@@ -27,7 +27,11 @@ const userSchema = {
             .messages(messages),
         password: Joi.string()
             .min(8)
-            .messages(messages)
+            .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+            .messages({
+                ...messages,
+                'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+            })
             .when('loginType', {
                 is: 'local',
                 then: Joi.required(),
@@ -56,6 +60,13 @@ const userSchema = {
         country: Joi.string()
             .max(100)
             .messages(messages),
+        phoneNumber: Joi.string()
+            .pattern(/^\+?[1-9]\d{1,14}$/)
+            .messages({
+                ...messages,
+                'string.pattern.base': 'Phone number must be a valid international format (10-15 digits, optional + prefix)'
+            })
+            .optional()
     }),
     login: Joi.object({
         email: Joi.string()
@@ -65,7 +76,14 @@ const userSchema = {
         loginType: Joi.string().valid('local', 'google', 'github').default('local'),
         password: Joi.when('loginType', {   
             is: 'local',
-            then: Joi.string().min(8).messages(messages).required(),
+            then: Joi.string()
+                .min(8)
+                .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+                .messages({
+                    ...messages,
+                    'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+                })
+                .required(),
             otherwise: Joi.forbidden()
         })
     }),

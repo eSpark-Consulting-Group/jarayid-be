@@ -20,6 +20,7 @@ model User {
   image                String?          @db.VarChar(500)
   imageKey             String?          @db.VarChar(500)
   country              String?          @db.VarChar(100)
+  phoneNumber          String?          @db.VarChar(20)
   resetPasswordToken   String?          @db.VarChar(500)
   resetPasswordExpires DateTime?
   createdAt            DateTime         @default(now())

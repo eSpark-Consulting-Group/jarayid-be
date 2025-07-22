@@ -112,6 +112,8 @@ class UserController {
                     socialId: true,
                     isSocialLogin: true,
                     role: true,
+                    country: true,
+                    phoneNumber: true,
                     createdAt: true
                 }
             });
@@ -128,7 +130,24 @@ class UserController {
         const { email, password, loginType = 'local' } = req.body;
 
         try {
-            const user = await prisma.user.findUnique({ where: { email } });
+            const user = await prisma.user.findUnique({ 
+                where: { email },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    password: true,
+                    loginType: true,
+                    image: true,
+                    socialId: true,
+                    isSocialLogin: true,
+                    role: true,
+                    country: true,
+                    phoneNumber: true,
+                    createdAt: true,
+                    updatedAt: true
+                }
+            });
             if (!user) {
                 return response.error(res, 'Invalid credentials', 401);
             }
@@ -147,8 +166,10 @@ class UserController {
                 }
             }
 
+            // Remove password from response
+            const { password: _, ...userResponse } = user;
             const token = generateToken({ userId: user.id, email: user.email });
-            return response.success(res, { user, token }, 'Logged in successfully');
+            return response.success(res, { user: userResponse, token }, 'Logged in successfully');
         } catch (error) {
             logger.error('Login error:', { error: error?.message || error });
             return response.error(res, 'Login failed', 500, error.message);
@@ -167,6 +188,7 @@ class UserController {
                     isBanned: true,
                     image: true,
                     country: true,
+                    phoneNumber: true,
                     loginType: true,
                     createdAt: true,
                     updatedAt: true
@@ -184,7 +206,7 @@ class UserController {
 
     async update(req, res) {
         const id = req.user.id;
-        const allowedFields = ['name', 'country'];
+        const allowedFields = ['name', 'country', 'phoneNumber'];
         const data = {};
         allowedFields.forEach((key) => {
             if (req.body[key] !== undefined) data[key] = req.body[key];

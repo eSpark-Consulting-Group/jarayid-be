@@ -31,5 +31,6 @@ export default {
     openaiService,
     webScraperService,
     aiSummaryService,
-    aiSummaryQueueService
+    aiSummaryQueueService,
+    viewTrackingService
 };
