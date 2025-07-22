@@ -7,6 +7,7 @@ import openaiService from './openaiService.js';
 import webScraperService from './webScraperService.js';
 import aiSummaryService from './aiSummaryService.js';
 import aiSummaryQueueService from './aiSummaryQueueService.js';
+import viewTrackingService from './viewTrackingService.js';
 
 export {
     cloudinaryService,
@@ -17,7 +18,8 @@ export {
     openaiService,
     webScraperService,
     aiSummaryService,
-    aiSummaryQueueService
+    aiSummaryQueueService,
+    viewTrackingService
 };
 
 export default {

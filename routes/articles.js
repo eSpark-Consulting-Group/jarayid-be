@@ -1,6 +1,6 @@
 import express from 'express';
 import ArticleController from '../controllers/articleController.js';
-import { auth, adminAuth, validate, upload } from '../middleware/index.js';
+import { auth, adminAuth, validate, upload, extractClientInfo } from '../middleware/index.js';
 import schemas from '../schemas/index.js';
 
 const router = express.Router();
@@ -90,6 +90,12 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  *           minLength: 1
  *           maxLength: 100
  *         description: Search in title, source, and summaries
+ *       - in: query
+ *         name: trackViews
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Enable view tracking for articles in the list (optional)
  *     responses:
  *       200:
  *         description: Articles retrieved successfully
@@ -109,7 +115,7 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  *       500:
  *         description: Internal server error
  */
-router.get('/', validation.article.query, articleController.getAllArticles);
+router.get('/', extractClientInfo, validation.article.query, articleController.getAllArticles);
 
 /**
  * @swagger
@@ -169,6 +175,67 @@ router.get('/stats', auth, adminAuth, articleController.getArticleStats);
 
 /**
  * @swagger
+ * /articles/trending:
+ *   get:
+ *     summary: Get trending articles based on recent views
+ *     tags: [Articles]
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [1d, 7d, 30d]
+ *           default: 7d
+ *         description: Time period to consider for trending
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of articles per page
+ *     responses:
+ *       200:
+ *         description: Trending articles retrieved successfully
+ */
+router.get('/trending', articleController.getTrendingArticles);
+
+/**
+ * @swagger
+ * /articles/analytics/views:
+ *   get:
+ *     summary: Get comprehensive view analytics dashboard data (Admin only)
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [7d, 30d, 90d, 1y, all]
+ *           default: 30d
+ *         description: Time period for analytics
+ *     responses:
+ *       200:
+ *         description: View analytics retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ */
+router.get('/analytics/views', auth, adminAuth, articleController.getViewAnalytics);
+
+/**
+ * @swagger
  * /articles/{id}:
  *   get:
  *     summary: Get article by ID
@@ -212,7 +279,7 @@ router.get('/stats', auth, adminAuth, articleController.getArticleStats);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', validation.article.params, articleController.getArticleById);
+router.get('/:id', extractClientInfo, validation.article.params, articleController.getArticleById);
 
 /**
  * @swagger
@@ -344,5 +411,39 @@ router.delete('/:id', auth, adminAuth, validation.article.params, articleControl
  *         description: Internal server error
  */
 router.patch('/:id/pin', auth, adminAuth, validation.article.params, articleController.togglePinArticle);
+
+/**
+ * @swagger
+ * /articles/{id}/views:
+ *   get:
+ *     summary: Get detailed view statistics for an article (Admin only)
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Article ID
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [1d, 7d, 30d, 90d, 1y, all]
+ *           default: 30d
+ *         description: Time period for statistics
+ *     responses:
+ *       200:
+ *         description: Article view statistics retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Article not found
+ */
+router.get('/:id/views', auth, adminAuth, validation.article.params, articleController.getArticleViewStats);
 
 export default router;

@@ -263,7 +263,7 @@ class UserController {
 
             await emailService.sendForgotPasswordEmail({
                 email: user.email,
-                userName: typeof user.name === 'string' ? user.name : user.name.en || user.name.ar || 'User',
+                userName: typeof user.name === 'string' ? user.name : 'User',
                 resetLink,
                 expirationTime: passwordResetService.getExpirationDisplayTime(),
             });

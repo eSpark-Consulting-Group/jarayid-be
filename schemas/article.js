@@ -144,6 +144,9 @@ const articleSchema = {
             .messages(messages),
         status: Joi.string()
             .valid('published', 'draft')
+            .messages(messages),
+        trackViews: Joi.boolean()
+            .default(false)
             .messages(messages)
     })
 };
