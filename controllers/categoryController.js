@@ -133,10 +133,26 @@ class CategoryController {
                                 email: true
                             }
                         },
+                        youtubeContents: {
+                            where: { isEnabled: true },
+                            orderBy: { createdAt: 'desc' },
+                            select: {
+                                id: true,
+                                title: true,
+                                youtubeUrl: true,
+                                contentType: true,
+                                thumbnailUrl: true,
+                                duration: true,
+                                viewCount: true,
+                                deviceType: true,
+                                createdAt: true
+                            }
+                        },
                         _count: {
                             select: {
                                 articles: true,
-                                rssFeeds: true
+                                rssFeeds: true,
+                                youtubeContents: true
                             }
                         }
                     }
@@ -144,9 +160,20 @@ class CategoryController {
                 prisma.category.count({ where })
             ]);
 
+            // Enhance categories with YouTube content statistics
+            const enhancedCategories = categories.map(category => ({
+                ...category,
+                youtubeStats: {
+                    total: category.youtubeContents.length,
+                    shorts: category.youtubeContents.filter(content => content.contentType === 'SHORTS').length,
+                    fullVideos: category.youtubeContents.filter(content => content.contentType === 'FULL_VIDEO').length,
+                    totalViews: category.youtubeContents.reduce((sum, content) => sum + content.viewCount, 0)
+                }
+            }));
+
             // Create paginated response
             const paginatedData = pagination.createPaginatedResponse(
-                categories, 
+                enhancedCategories, 
                 req.query, 
                 total, 
                 { defaultLimit: 10, maxLimit: 100 }
@@ -173,10 +200,36 @@ class CategoryController {
                             email: true
                         }
                     },
+                    youtubeContents: {
+                        where: { isEnabled: true },
+                        orderBy: [
+                            { contentType: 'asc' }, // SHORTS first, then FULL_VIDEO
+                            { createdAt: 'desc' }
+                        ],
+                        select: {
+                            id: true,
+                            title: true,
+                            youtubeUrl: true,
+                            contentType: true,
+                            thumbnailUrl: true,
+                            duration: true,
+                            viewCount: true,
+                            deviceType: true,
+                            description: true,
+                            createdAt: true,
+                            createdBy: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
+                        }
+                    },
                     _count: {
                         select: {
                             articles: true,
-                            rssFeeds: true
+                            rssFeeds: true,
+                            youtubeContents: true
                         }
                     }
                 }
@@ -186,7 +239,22 @@ class CategoryController {
                 return response.error(res, 'Category not found', 404);
             }
 
-            return response.success(res, category, 'Category retrieved successfully');
+            // Enhance category with YouTube content statistics and grouped content
+            const enhancedCategory = {
+                ...category,
+                youtubeStats: {
+                    total: category.youtubeContents.length,
+                    shorts: category.youtubeContents.filter(content => content.contentType === 'SHORTS').length,
+                    fullVideos: category.youtubeContents.filter(content => content.contentType === 'FULL_VIDEO').length,
+                    totalViews: category.youtubeContents.reduce((sum, content) => sum + content.viewCount, 0)
+                },
+                youtubeContentsByType: {
+                    shorts: category.youtubeContents.filter(content => content.contentType === 'SHORTS'),
+                    fullVideos: category.youtubeContents.filter(content => content.contentType === 'FULL_VIDEO')
+                }
+            };
+
+            return response.success(res, enhancedCategory, 'Category retrieved successfully');
         } catch (error) {
             logger.error('Get category error:', { error: error?.message || error });
             return response.error(res, 'Failed to retrieve category', 500);
