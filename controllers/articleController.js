@@ -563,8 +563,14 @@ class ArticleController {
                 }),
                 prisma.article.groupBy({
                     by: ['categoryId'],
-                    _count: { _all: true },
-                    orderBy: { _count: { _all: 'desc' } },
+                    _count: {
+                        categoryId: true
+                    },
+                    orderBy: {
+                        _count: {
+                            categoryId: 'desc'
+                        }
+                    },
                     take: 5
                 })
             ]);
@@ -580,7 +586,7 @@ class ArticleController {
 
             const categoriesWithCounts = topCategories.map(cat => ({
                 category: categories.find(c => c.id === cat.categoryId) || { id: cat.categoryId, name: 'Uncategorized' },
-                count: cat._count._all
+                count: cat._count.categoryId
             }));
 
             const articleStats = {
@@ -740,13 +746,13 @@ class ArticleController {
             // Get views by day for the period (for charts)
             const viewsByDay = await prisma.$queryRaw`
                 SELECT 
-                    DATE(viewedAt) as date,
+                    DATE("viewedAt") as date,
                     COUNT(*) as views,
-                    COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN user_id END) as registered_views,
-                    COUNT(DISTINCT CASE WHEN user_id IS NULL THEN ip_address END) as anonymous_views
+                    COUNT(DISTINCT CASE WHEN "userId" IS NOT NULL THEN "userId" END) as registered_views,
+                    COUNT(DISTINCT CASE WHEN "userId" IS NULL THEN "ipAddress" END) as anonymous_views
                 FROM article_views 
-                WHERE viewedAt >= ${viewTrackingService.getPeriodStartDate(period)}
-                GROUP BY DATE(viewedAt)
+                WHERE "viewedAt" >= ${viewTrackingService.getPeriodStartDate(period)}
+                GROUP BY DATE("viewedAt")
                 ORDER BY date DESC
                 LIMIT 30
             `;

@@ -6,6 +6,7 @@ export const schemaPaths = [
     './docs/categorySchemas.js', 
     './docs/rssFeedSchemas.js',
     './docs/articleSchemas.js',
+    './docs/commentSchemas.js',
     './docs/commonSchemas.js'
 ];
 

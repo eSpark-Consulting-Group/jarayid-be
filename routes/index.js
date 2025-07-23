@@ -5,6 +5,7 @@ import usersRouter from './users.js';
 import categoriesRouter from './categories.js';
 import rssFeedsRouter from './rssFeeds.js';
 import articlesRouter from './articles.js';
+import commentsRouter from './comments.js';
 import aiSummaryRouter from './aiSummary.js';
 import youtubeContentRouter from './youtubeContent.js';
 
@@ -19,6 +20,9 @@ router.use('/rss-feeds', rssFeedsRouter);
 
 // Articles related routes
 router.use('/articles', articlesRouter);
+
+// Comments related routes
+router.use('/comments', commentsRouter);
 
 // AI Summary related routes
 router.use('/ai-summary', aiSummaryRouter);

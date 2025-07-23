@@ -112,6 +112,43 @@
  *         currentPage:
  *           type: integer
  *           description: Current page number
+ *     Pagination:
+ *       type: object
+ *       properties:
+ *         total:
+ *           type: integer
+ *           description: Total number of items
+ *           example: 150
+ *         page:
+ *           type: integer
+ *           description: Current page number
+ *           example: 1
+ *         limit:
+ *           type: integer
+ *           description: Items per page
+ *           example: 10
+ *         totalPages:
+ *           type: integer
+ *           description: Total number of pages
+ *           example: 15
+ *         hasNextPage:
+ *           type: boolean
+ *           description: Whether there is a next page
+ *           example: true
+ *         hasPrevPage:
+ *           type: boolean
+ *           description: Whether there is a previous page
+ *           example: false
+ *         nextPage:
+ *           type: integer
+ *           nullable: true
+ *           description: Next page number (null if no next page)
+ *           example: 2
+ *         prevPage:
+ *           type: integer
+ *           nullable: true
+ *           description: Previous page number (null if no previous page)
+ *           example: null
  *   securitySchemes:
  *     bearerAuth:
  *       type: http
