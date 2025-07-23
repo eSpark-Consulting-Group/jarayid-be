@@ -84,22 +84,22 @@ app.listen(PORT, async () => {
         logger.info('Database connected');
         
         // Initialize RSS Queue Service
-        // try {
-        //     await rssQueueService.initialize();
-        //     logger.info('RSS Queue Service initialized');
-        // } catch (queueError) {
-        //     logger.error('RSS Queue Service initialization failed:', queueError);
-        //     // Continue without queue service if Redis is not available
-        // }
+        try {
+            await rssQueueService.initialize();
+            logger.info('RSS Queue Service initialized');
+        } catch (queueError) {
+            logger.error('RSS Queue Service initialization failed:', queueError);
+            // Continue without queue service if Redis is not available
+        }
         
-        // // Initialize AI Summary Queue Service
-        // try {
-        //     await aiSummaryQueueService.initialize();
-        //     logger.info('AI Summary Queue Service initialized');
-        // } catch (aiQueueError) {
-        //     logger.error('AI Summary Queue Service initialization failed:', aiQueueError);
-        //     // Continue without AI queue service if initialization fails
-        // }
+        // Initialize AI Summary Queue Service
+        try {
+            await aiSummaryQueueService.initialize();
+            logger.info('AI Summary Queue Service initialized');
+        } catch (aiQueueError) {
+            logger.error('AI Summary Queue Service initialization failed:', aiQueueError);
+            // Continue without AI queue service if initialization fails
+        }
         
         logger.info(`Server is running on port ${PORT}`);
     } catch (error) {
