@@ -13,7 +13,6 @@ const prisma = new PrismaClient();
 const optionalAuth = async (req, res, next) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
-console.log("optionalAuth token:", token);
     if (!token) {
       // No token — proceed without attaching user
       return next();
@@ -32,7 +31,6 @@ console.log("optionalAuth token:", token);
     } catch (err) {
       // Invalid token — proceed without attaching user
     }
-console.log("optionalAuth user:", req.user);
     return next();
   } catch (error) {
     return response.error(res, "Optional auth failed", 500);

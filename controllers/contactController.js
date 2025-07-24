@@ -80,7 +80,6 @@ class ContactController {
   //   }
   // }
   async submitContactForm(req, res) {
-    console.log("Contact Form Submission | req.user:", req.user);
     const {
       name,
       business_name,
