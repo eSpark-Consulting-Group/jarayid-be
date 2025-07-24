@@ -9,9 +9,9 @@ datasource db {
 
 model User {
   id                   String           @id @default(uuid())
-  name                 Json?         
+  name                 Json?
   email                String           @unique
-  password             String?          // Made optional for social login
+  password             String? // Made optional for social login
   role                 UserRole         @default(USER)
   isSocialLogin        Boolean          @default(false)
   loginType            String?
@@ -114,16 +114,30 @@ model Comment {
 }
 
 model Contact {
-  id          String   @id @default(uuid())
-  userId      String
-  name        String   @db.VarChar(500)
-  email       String   @db.VarChar(500)
-  message     String
-  isResponded Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  id             String   @id @default(uuid())
+  userId         String
+  name           String   @db.VarChar(500)
+  business_name  String   @db.VarChar(150)
+  contact_number String   @db.VarChar(20)
+  contact_email  String   @db.VarChar(500)
+  country        String   @db.VarChar(100)
+  message        String
+  isResponded    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
 
   @@map("contacts")
+}
+
+
+
+model StaticPage {
+  id        String   @id @default(uuid())
+  title     String   @unique
+  content   String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Favorite {

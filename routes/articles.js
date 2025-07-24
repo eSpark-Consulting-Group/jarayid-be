@@ -446,4 +446,292 @@ router.patch('/:id/pin', auth, adminAuth, validation.article.params, articleCont
  */
 router.get('/:id/views', auth, adminAuth, validation.article.params, articleController.getArticleViewStats);
 
+/**
+ * @swagger
+ * /articles/{id}/toggle-favorite:
+ *   post:
+ *     summary: Toggle favorite status for an article
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Article ID
+ *     responses:
+ *       200:
+ *         description: Favorite status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Article added to favorites"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isFavorited:
+ *                       type: boolean
+ *                       example: true
+ *                     article:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Article not found
+ */
+router.post('/:id/toggle-favorite', auth, validation.article.params, articleController.toggleFavorite);
+
+/**
+ * @swagger
+ * /articles/{id}/toggle-read-later:
+ *   post:
+ *     summary: Toggle read later status for an article
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Article ID
+ *     responses:
+ *       200:
+ *         description: Read later status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Article added to read later"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isInReadLater:
+ *                       type: boolean
+ *                       example: true
+ *                     article:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Article not found
+ */
+router.post('/:id/toggle-read-later', auth, validation.article.params, articleController.toggleReadLater);
+
+/**
+ * @swagger
+ * /articles/favorites:
+ *   get:
+ *     summary: Get user's favorite articles
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Favorite articles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Favorite articles retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Article'
+ *                           - type: object
+ *                             properties:
+ *                               favoritedAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         totalFavorites:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/favorites', auth, validation.article.query, articleController.getUserFavorites);
+
+/**
+ * @swagger
+ * /articles/read-later:
+ *   get:
+ *     summary: Get user's read later articles
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Read later articles retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Read later articles retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Article'
+ *                           - type: object
+ *                             properties:
+ *                               addedToReadLaterAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                               updatedAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         totalReadLater:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/read-later', auth, validation.article.query, articleController.getUserReadLater);
+
+/**
+ * @swagger
+ * /articles/admin/favorites-stats:
+ *   get:
+ *     summary: Get favorites statistics (Admin only)
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of top articles to return
+ *     responses:
+ *       200:
+ *         description: Favorites statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Favorites statistics retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         totalFavorites:
+ *                           type: integer
+ *                           example: 1250
+ *                         totalUsers:
+ *                           type: integer
+ *                           example: 500
+ *                         totalArticles:
+ *                           type: integer
+ *                           example: 300
+ *                         favoritesRate:
+ *                           type: string
+ *                           example: "4.17"
+ *                     mostFavorited:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           article:
+ *                             $ref: '#/components/schemas/Article'
+ *                           favoriteCount:
+ *                             type: integer
+ *                             example: 45
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ */
+router.get('/admin/favorites-stats', auth, adminAuth, articleController.getFavoritesStats);
+
 export default router;

@@ -181,11 +181,22 @@ class ArticleController {
                         },
                         _count: {
                             select: {
-                                comments: true,
+                                comments: { where: { isDeleted: false } },
                                 favorites: true,
                                 readLater: true
                             }
-                        }
+                        },
+                        // Include user-specific data if authenticated
+                        ...(req.user && {
+                            favorites: {
+                                where: { userId: req.user.id },
+                                select: { id: true }
+                            },
+                            readLater: {
+                                where: { userId: req.user.id },
+                                select: { id: true }
+                            }
+                        })
                     },
                     orderBy: [
                         { pinned: 'desc' },
@@ -196,8 +207,18 @@ class ArticleController {
                 prisma.article.count({ where })
             ]);
 
+            // Add user-specific flags to articles if authenticated
+            const articlesWithUserData = req.user ? articles.map(article => ({
+                ...article,
+                isFavorited: article.favorites && article.favorites.length > 0,
+                isInReadLater: article.readLater && article.readLater.length > 0,
+                // Remove the raw favorite/readLater arrays from response
+                favorites: undefined,
+                readLater: undefined
+            })) : articles;
+
             // Track views for articles if requested (optional - use trackViews=true in query)
-            if (trackViews === 'true' && articles.length > 0) {
+            if (trackViews === 'true' && articlesWithUserData.length > 0) {
                 try {
                     const viewContext = req.clientInfo ? req.clientInfo.getViewContext() : {
                         userId: req.user?.id || null,
@@ -210,7 +231,7 @@ class ArticleController {
                     };
 
                     // Track views for all articles in bulk (non-blocking)
-                    const viewTrackingPromises = articles.map(article => 
+                    const viewTrackingPromises = articlesWithUserData.map(article => 
                         viewTrackingService.trackArticleView(article.id, {
                             ...viewContext,
                             // Add context that this is a bulk view tracking
@@ -232,13 +253,13 @@ class ArticleController {
                     logger.warn('Bulk view tracking initialization failed:', { 
                         error: viewTrackingError.message,
                         userId: req.user?.id,
-                        articleCount: articles.length
+                        articleCount: articlesWithUserData.length
                     });
                 }
             }
 
             const paginatedResponse = pagination.createPaginatedResponse(
-                articles,
+                articlesWithUserData,
                 req.query,
                 total,
                 {
@@ -254,7 +275,7 @@ class ArticleController {
             // Add view tracking info to meta if enabled
             if (trackViews === 'true') {
                 paginatedResponse.meta.viewTrackingEnabled = true;
-                paginatedResponse.meta.trackedArticles = articles.length;
+                paginatedResponse.meta.trackedArticles = articlesWithUserData.length;
             }
 
             return response.success(res, paginatedResponse, 'Articles retrieved successfully');
@@ -301,15 +322,36 @@ class ArticleController {
                     },
                     _count: {
                         select: {
+                            comments: { where: { isDeleted: false } },
                             favorites: true,
                             readLater: true
                         }
-                    }
+                    },
+                    // Include user-specific data if authenticated
+                    ...(req.user && {
+                        favorites: {
+                            where: { userId: req.user.id },
+                            select: { id: true }
+                        },
+                        readLater: {
+                            where: { userId: req.user.id },
+                            select: { id: true }
+                        }
+                    })
                 }
             });
 
             if (!article) {
                 return response.notFound(res, 'Article not found');
+            }
+
+            // Add user-specific flags if authenticated
+            if (req.user) {
+                article.isFavorited = article.favorites && article.favorites.length > 0;
+                article.isInReadLater = article.readLater && article.readLater.length > 0;
+                // Remove the raw arrays from response
+                delete article.favorites;
+                delete article.readLater;
             }
 
             // Track article view with sophisticated logic
@@ -781,6 +823,436 @@ class ArticleController {
                 query: req.query 
             });
             return response.error(res, 'Failed to retrieve view analytics', 500, error.message);
+        }
+    }
+
+    /**
+     * Toggle favorite status for an article (add/remove from favorites)
+     * POST /api/articles/:id/toggle-favorite
+     */
+    async toggleFavorite(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        try {
+            // Check if article exists
+            const article = await prisma.article.findUnique({
+                where: { id },
+                select: { id: true, title: true }
+            });
+
+            if (!article) {
+                return response.notFound(res, 'Article not found');
+            }
+
+            // Check if already favorited
+            const existingFavorite = await prisma.favorite.findFirst({
+                where: {
+                    userId,
+                    articleId: id
+                }
+            });
+
+            let isFavorited = false;
+            let message = '';
+
+            if (existingFavorite) {
+                // Remove from favorites
+                await prisma.favorite.delete({
+                    where: { id: existingFavorite.id }
+                });
+                message = 'Article removed from favorites';
+                isFavorited = false;
+            } else {
+                // Add to favorites
+                await prisma.favorite.create({
+                    data: {
+                        userId,
+                        articleId: id
+                    }
+                });
+                message = 'Article added to favorites';
+                isFavorited = true;
+            }
+
+            logger.info(`Favorite toggled: ${isFavorited ? 'added' : 'removed'}`, {
+                userId,
+                articleId: id,
+                action: isFavorited ? 'add' : 'remove'
+            });
+
+            return response.success(res, {
+                isFavorited,
+                article: {
+                    id: article.id,
+                    title: article.title
+                }
+            }, message);
+
+        } catch (error) {
+            logger.error('Toggle favorite error:', {
+                error: error.message,
+                userId,
+                articleId: id
+            });
+            return response.error(res, 'Failed to toggle favorite status', 500, error.message);
+        }
+    }
+
+    /**
+     * Toggle read later status for an article (add/remove from read later)
+     * POST /api/articles/:id/toggle-read-later
+     */
+    async toggleReadLater(req, res) {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        try {
+            // Check if article exists
+            const article = await prisma.article.findUnique({
+                where: { id },
+                select: { id: true, title: true }
+            });
+
+            if (!article) {
+                return response.notFound(res, 'Article not found');
+            }
+
+            // Check if already in read later
+            const existingReadLater = await prisma.readLater.findFirst({
+                where: {
+                    userId,
+                    articleId: id
+                }
+            });
+
+            let isInReadLater = false;
+            let message = '';
+
+            if (existingReadLater) {
+                // Remove from read later
+                await prisma.readLater.delete({
+                    where: { id: existingReadLater.id }
+                });
+                message = 'Article removed from read later';
+                isInReadLater = false;
+            } else {
+                // Add to read later
+                await prisma.readLater.create({
+                    data: {
+                        userId,
+                        articleId: id
+                    }
+                });
+                message = 'Article added to read later';
+                isInReadLater = true;
+            }
+
+            logger.info(`Read later toggled: ${isInReadLater ? 'added' : 'removed'}`, {
+                userId,
+                articleId: id,
+                action: isInReadLater ? 'add' : 'remove'
+            });
+
+            return response.success(res, {
+                isInReadLater,
+                article: {
+                    id: article.id,
+                    title: article.title
+                }
+            }, message);
+
+        } catch (error) {
+            logger.error('Toggle read later error:', {
+                error: error.message,
+                userId,
+                articleId: id
+            });
+            return response.error(res, 'Failed to toggle read later status', 500, error.message);
+        }
+    }
+
+    /**
+     * Get user's favorite articles
+     * GET /api/articles/favorites
+     */
+    async getUserFavorites(req, res) {
+        const userId = req.user.id;
+
+        try {
+            const { skip, take } = pagination.getPaginationParams(req.query, {
+                defaultLimit: 10,
+                maxLimit: 100
+            });
+
+            const [favorites, total] = await Promise.all([
+                prisma.favorite.findMany({
+                    where: { userId },
+                    skip,
+                    take,
+                    include: {
+                        article: {
+                            include: {
+                                category: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        type: true
+                                    }
+                                },
+                                author: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true
+                                    }
+                                },
+                                _count: {
+                                    select: {
+                                        comments: { where: { isDeleted: false } },
+                                        favorites: true,
+                                        readLater: true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' }
+                }),
+                prisma.favorite.count({ where: { userId } })
+            ]);
+
+            const articles = favorites.map(fav => ({
+                ...fav.article,
+                favoritedAt: fav.createdAt
+            }));
+
+            const paginatedResponse = pagination.createPaginatedResponse(
+                articles,
+                req.query,
+                total,
+                {
+                    defaultLimit: 10,
+                    maxLimit: 100
+                }
+            );
+
+            paginatedResponse.meta.totalFavorites = total;
+
+            return response.success(res, paginatedResponse, 'Favorite articles retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get user favorites error:', {
+                error: error.message,
+                userId
+            });
+            return response.error(res, 'Failed to retrieve favorite articles', 500, error.message);
+        }
+    }
+
+    /**
+     * Get user's read later articles
+     * GET /api/articles/read-later
+     */
+    async getUserReadLater(req, res) {
+        const userId = req.user.id;
+
+        try {
+            const { skip, take } = pagination.getPaginationParams(req.query, {
+                defaultLimit: 10,
+                maxLimit: 100
+            });
+
+            const [readLaterItems, total] = await Promise.all([
+                prisma.readLater.findMany({
+                    where: { userId },
+                    skip,
+                    take,
+                    include: {
+                        article: {
+                            include: {
+                                category: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        type: true
+                                    }
+                                },
+                                author: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true
+                                    }
+                                },
+                                _count: {
+                                    select: {
+                                        comments: { where: { isDeleted: false } },
+                                        favorites: true,
+                                        readLater: true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' }
+                }),
+                prisma.readLater.count({ where: { userId } })
+            ]);
+
+            const articles = readLaterItems.map(item => ({
+                ...item.article,
+                addedToReadLaterAt: item.createdAt,
+                updatedAt: item.updatedAt
+            }));
+
+            const paginatedResponse = pagination.createPaginatedResponse(
+                articles,
+                req.query,
+                total,
+                {
+                    defaultLimit: 10,
+                    maxLimit: 100
+                }
+            );
+
+            paginatedResponse.meta.totalReadLater = total;
+
+            return response.success(res, paginatedResponse, 'Read later articles retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get user read later error:', {
+                error: error.message,
+                userId
+            });
+            return response.error(res, 'Failed to retrieve read later articles', 500, error.message);
+        }
+    }
+
+    /**
+     * Get most favorited articles (Admin API)
+     * GET /api/articles/admin/favorites-stats
+     */
+    async getFavoritesStats(req, res) {
+        try {
+            const { limit = 10 } = req.query;
+            const takeLimit = Math.min(parseInt(limit), 50); // Max 50 articles
+
+            // Get most favorited articles
+            const mostFavorited = await prisma.favorite.groupBy({
+                by: ['articleId'],
+                _count: {
+                    articleId: true
+                },
+                orderBy: {
+                    _count: {
+                        articleId: 'desc'
+                    }
+                },
+                take: takeLimit
+            });
+
+            // Get article details
+            const articleIds = mostFavorited.map(item => item.articleId);
+            const articles = await prisma.article.findMany({
+                where: { id: { in: articleIds } },
+                include: {
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                            type: true
+                        }
+                    },
+                    author: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            comments: { where: { isDeleted: false } },
+                            favorites: true,
+                            readLater: true
+                        }
+                    }
+                }
+            });
+
+            // Combine data
+            const favoritesWithDetails = mostFavorited.map(item => ({
+                article: articles.find(a => a.id === item.articleId),
+                favoriteCount: item._count.articleId
+            }));
+
+            // Get overall stats
+            const [totalFavorites, totalUsers, totalArticles] = await Promise.all([
+                prisma.favorite.count(),
+                prisma.user.count(),
+                prisma.article.count()
+            ]);
+
+            // Get favorites by category (using a different approach since groupBy can't access relations)
+            const favoritesWithCategories = await prisma.favorite.findMany({
+                include: {
+                    article: {
+                        select: {
+                            categoryId: true,
+                            category: {
+                                select: {
+                                    name: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Group by category manually
+            const categoryGroups = {};
+            favoritesWithCategories.forEach(fav => {
+                const categoryId = fav.article.categoryId || 'uncategorized';
+                const categoryName = fav.article.category?.name || 'Uncategorized';
+                
+                if (!categoryGroups[categoryId]) {
+                    categoryGroups[categoryId] = {
+                        categoryId,
+                        categoryName,
+                        count: 0
+                    };
+                }
+                categoryGroups[categoryId].count++;
+            });
+
+            const favoritesByCategory = Object.values(categoryGroups)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            const stats = {
+                summary: {
+                    totalFavorites,
+                    totalUsers,
+                    totalArticles,
+                    favoritesRate: totalArticles > 0 ? ((totalFavorites / totalArticles) * 100).toFixed(2) : 0
+                },
+                mostFavorited: favoritesWithDetails,
+                favoritesByCategory: favoritesByCategory
+            };
+
+            logger.info('Favorites statistics retrieved', {
+                totalFavorites,
+                mostFavoritedCount: favoritesWithDetails.length
+            });
+
+            return response.success(res, stats, 'Favorites statistics retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get favorites stats error:', {
+                error: error.message
+            });
+            return response.error(res, 'Failed to retrieve favorites statistics', 500, error.message);
         }
     }
 }
