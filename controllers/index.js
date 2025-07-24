@@ -6,6 +6,8 @@ import ArticleController from './articleController.js';
 import CommentController from './commentController.js';
 import AISummaryController from './aiSummaryController.js';
 import YouTubeContentController from './youtubeContentController.js';
+import StaticPageController from './staticPageController.js';
+import ContactController from './contactController.js';
 
 export { 
     UserController, 
@@ -14,6 +16,8 @@ export {
     ArticleController, 
     CommentController,
     AISummaryController,
-    YouTubeContentController 
+    YouTubeContentController,
+    StaticPageController,
+    ContactController
 };
 export default UserController;

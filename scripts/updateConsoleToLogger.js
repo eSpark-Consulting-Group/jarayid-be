@@ -88,7 +88,7 @@ const logger = winston.createLogger({
         );
         
         fs.writeFileSync(filePath, content);
-        console.log(`✅ Updated ${controllerName}`);
+        // console.log(`✅ Updated ${controllerName}`);
         
     } catch (error) {
         console.error(`❌ Failed to update ${controllerName}:`, error.message);
@@ -103,8 +103,8 @@ controllers.forEach(filePath => {
     if (fs.existsSync(filePath)) {
         updateConsoleToLogger(filePath, controllerName);
     } else {
-        console.log(`⚠️  File not found: ${filePath}`);
+        // console.log(`⚠️  File not found: ${filePath}`);
     }
 });
 
-console.log('\n🎉 All controllers updated with proper logging!');
+// console.log('\n🎉 All controllers updated with proper logging!');

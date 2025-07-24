@@ -21,7 +21,7 @@ try {
     content = content.replace(/console\.warn\("([^"]+)"\);/g, 'logger.warn("$1");');
     
     fs.writeFileSync(filePath, content);
-    console.log('✅ Updated RSS Queue Service console statements to logger');
+    // console.log('✅ Updated RSS Queue Service console statements to logger');
     
 } catch (error) {
     console.error('❌ Failed to update RSS Queue Service:', error.message);
