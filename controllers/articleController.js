@@ -37,6 +37,7 @@ class ArticleController {
             summaryArabic, 
             summaryEnglish, 
             categoryId, 
+            subType,
             pinned = false,
             publishedAt 
         } = req.body;
@@ -82,6 +83,7 @@ class ArticleController {
                 summaryArabic,
                 summaryEnglish,
                 categoryId,
+                subType,
                 pinned,
                 publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
                 userId: req.user.id // Admin who created the article
@@ -138,7 +140,7 @@ class ArticleController {
 
     async getAllArticles(req, res) {
         try {
-            const { page = 1, limit = 10, categoryId, pinned, search, status, trackViews = false } = req.query;
+            const { page = 1, limit = 10, categoryId, subType, pinned, search, status, trackViews = false } = req.query;
             const { skip, take } = pagination.getPaginationParams(req.query, { 
                 defaultLimit: 10, 
                 maxLimit: 200 // Increased max limit to allow for 50+ items per page
@@ -147,6 +149,7 @@ class ArticleController {
             const where = {};
             
             if (categoryId) where.categoryId = categoryId;
+            if (subType) where.subType = subType;
             if (pinned !== undefined) where.pinned = pinned === 'true';
             
             if (search) {
@@ -394,6 +397,7 @@ class ArticleController {
             summaryArabic, 
             summaryEnglish, 
             categoryId, 
+            subType,
             pinned,
             publishedAt 
         } = req.body;
@@ -452,6 +456,7 @@ class ArticleController {
             if (summaryArabic !== undefined) data.summaryArabic = summaryArabic;
             if (summaryEnglish !== undefined) data.summaryEnglish = summaryEnglish;
             if (categoryId !== undefined) data.categoryId = categoryId;
+            if (subType !== undefined) data.subType = subType;
             if (pinned !== undefined) data.pinned = pinned;
             if (publishedAt !== undefined) data.publishedAt = new Date(publishedAt);
 

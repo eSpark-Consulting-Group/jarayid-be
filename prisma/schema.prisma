@@ -60,39 +60,41 @@ model Category {
 }
 
 model RSSFeed {
-  id         String   @id @default(uuid())
-  name       String   @db.VarChar(500)
-  url        String   @db.VarChar(500)
-  status     Status   @default(DRAFT)
-  logo       String?  @db.VarChar(500)
-  logoKey    String?  @db.VarChar(500)
+  id         String           @id @default(uuid())
+  name       String           @db.VarChar(500)
+  url        String           @db.VarChar(500)
+  status     Status           @default(DRAFT)
+  logo       String?          @db.VarChar(500)
+  logoKey    String?          @db.VarChar(500)
   categoryId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  category   Category @relation(fields: [categoryId], references: [id])
+  subType    CategorySubType?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  category   Category         @relation(fields: [categoryId], references: [id])
 
   @@map("rss_feeds")
 }
 
 model Article {
-  id              String        @id @default(uuid())
-  title           String        @db.VarChar(500)
-  url             String?       @db.VarChar(500)
-  source          String        @db.VarChar(500)
+  id              String           @id @default(uuid())
+  title           String           @db.VarChar(500)
+  url             String?          @db.VarChar(500)
+  source          String           @db.VarChar(500)
   originalContent Json
   summaryArabic   String?
   summaryEnglish  String?
-  image           String?       @db.VarChar(500)
-  imageKey        String?       @db.VarChar(500)
+  image           String?          @db.VarChar(500)
+  imageKey        String?          @db.VarChar(500)
   categoryId      String?
-  pinned          Boolean       @default(false)
-  viewCount       Int           @default(0)
+  subType         CategorySubType?
+  pinned          Boolean          @default(false)
+  viewCount       Int              @default(0)
   publishedAt     DateTime?
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime         @default(now())
   userId          String
   articleViews    ArticleView[]
-  category        Category?     @relation(fields: [categoryId], references: [id])
-  author          User          @relation(fields: [userId], references: [id])
+  category        Category?        @relation(fields: [categoryId], references: [id])
+  author          User             @relation(fields: [userId], references: [id])
   comments        Comment[]
   favorites       Favorite[]
   readLater       ReadLater[]
@@ -234,6 +236,12 @@ enum CategoryType {
   COUNTRY
   NORMAL
   MEDIA
+}
+
+enum CategorySubType {
+  SPORTS
+  ECONOMICS
+  POLITICS
 }
 
 enum UserRole {

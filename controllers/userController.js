@@ -472,6 +472,602 @@ class UserController {
             return response.error(res, 'Failed to update password', 500, error.message);
         }
     }
+
+    /**
+     * Get all users with pagination and search (Admin only)
+     * GET /api/users/admin/users
+     */
+    async getAllUsers(req, res) {
+        try {
+            const { 
+                page = 1, 
+                limit = 10, 
+                search, 
+                role, 
+                isBanned, 
+                isSocialLogin,
+                subscriptionStatus,
+                sortBy = 'createdAt',
+                sortOrder = 'desc'
+            } = req.query;
+
+            // Build where conditions
+            const where = {};
+            
+            // Search functionality
+            if (search) {
+                where.OR = [
+                    { email: { contains: search, mode: 'insensitive' } },
+                    { phoneNumber: { contains: search, mode: 'insensitive' } },
+                    { country: { contains: search, mode: 'insensitive' } }
+                ];
+
+                // Handle JSON name field search
+                where.OR.push({
+                    name: {
+                        path: ['en'],
+                        string_contains: search
+                    }
+                });
+                where.OR.push({
+                    name: {
+                        path: ['ar'], 
+                        string_contains: search
+                    }
+                });
+            }
+
+            // Filter by role
+            if (role) {
+                where.role = role;
+            }
+
+            // Filter by ban status
+            if (isBanned !== undefined) {
+                where.isBanned = isBanned === 'true';
+            }
+
+            // Filter by social login
+            if (isSocialLogin !== undefined) {
+                where.isSocialLogin = isSocialLogin === 'true';
+            }
+
+            // Build orderBy
+            const orderBy = {};
+            orderBy[sortBy] = sortOrder;
+
+            // Get pagination parameters
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+            const take = parseInt(limit);
+
+            // Fetch users with subscription info and counts
+            const [users, total] = await Promise.all([
+                prisma.user.findMany({
+                    where,
+                    skip,
+                    take,
+                    orderBy,
+                    include: {
+                        subscriptions: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1
+                        },
+                        _count: {
+                            select: {
+                                articles: true,
+                                comments: { where: { isDeleted: false } },
+                                favorites: true,
+                                readLater: true,
+                                articleViews: true
+                            }
+                        }
+                    }
+                }),
+                prisma.user.count({ where })
+            ]);
+
+            // Process subscription status filter after fetching
+            let filteredUsers = users;
+            if (subscriptionStatus) {
+                filteredUsers = users.filter(user => {
+                    const latestSubscription = user.subscriptions[0];
+                    
+                    if (subscriptionStatus === 'premium') {
+                        return latestSubscription && latestSubscription.isPremium;
+                    } else if (subscriptionStatus === 'trial') {
+                        return latestSubscription && !latestSubscription.isPremium && latestSubscription.trialEndsAt && new Date(latestSubscription.trialEndsAt) > new Date();
+                    } else if (subscriptionStatus === 'free') {
+                        return !latestSubscription || (!latestSubscription.isPremium && (!latestSubscription.trialEndsAt || new Date(latestSubscription.trialEndsAt) <= new Date()));
+                    }
+                    return true;
+                });
+            }
+
+            // Format response data
+            const formattedUsers = filteredUsers.map(user => {
+                const latestSubscription = user.subscriptions[0];
+                let subscriptionInfo = {
+                    status: 'free',
+                    isPremium: false,
+                    trialEndsAt: null,
+                    subscriptionDate: null
+                };
+
+                if (latestSubscription) {
+                    if (latestSubscription.isPremium) {
+                        subscriptionInfo.status = 'premium';
+                        subscriptionInfo.isPremium = true;
+                    } else if (latestSubscription.trialEndsAt && new Date(latestSubscription.trialEndsAt) > new Date()) {
+                        subscriptionInfo.status = 'trial';
+                        subscriptionInfo.trialEndsAt = latestSubscription.trialEndsAt;
+                    }
+                    subscriptionInfo.subscriptionDate = latestSubscription.createdAt;
+                }
+
+                return {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    isBanned: user.isBanned,
+                    isSocialLogin: user.isSocialLogin,
+                    loginType: user.loginType,
+                    image: user.image,
+                    country: user.country,
+                    phoneNumber: user.phoneNumber,
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt,
+                    subscription: subscriptionInfo,
+                    stats: {
+                        articlesCreated: user._count.articles,
+                        commentsCount: user._count.comments,
+                        favoritesCount: user._count.favorites,
+                        readLaterCount: user._count.readLater,
+                        articleViewsCount: user._count.articleViews
+                    }
+                };
+            });
+
+            const response_data = {
+                users: formattedUsers,
+                pagination: {
+                    total,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    totalPages: Math.ceil(total / parseInt(limit)),
+                    hasNextPage: parseInt(page) < Math.ceil(total / parseInt(limit)),
+                    hasPrevPage: parseInt(page) > 1
+                },
+                meta: {
+                    totalUsers: total,
+                    currentPageUsers: formattedUsers.length,
+                    filters: { role, isBanned, isSocialLogin, subscriptionStatus, search }
+                }
+            };
+
+            logger.info('Admin users list retrieved', { 
+                adminId: req.user.id, 
+                totalUsers: total, 
+                page: parseInt(page),
+                filters: { role, isBanned, isSocialLogin, subscriptionStatus, search }
+            });
+
+            return response.success(res, response_data, 'Users retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get all users error:', { error: error.message, adminId: req.user?.id });
+            return response.error(res, 'Failed to retrieve users', 500, error.message);
+        }
+    }
+
+    /**
+     * Get single user details with full info (Admin only)
+     * GET /api/users/admin/users/:id
+     */
+    async getUserById(req, res) {
+        try {
+            const { id } = req.params;
+
+            const user = await prisma.user.findUnique({
+                where: { id },
+                include: {
+                    subscriptions: {
+                        orderBy: { createdAt: 'desc' }
+                    },
+                    articles: {
+                        select: {
+                            id: true,
+                            title: true,
+                            createdAt: true,
+                            viewCount: true,
+                            pinned: true
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        take: 10
+                    },
+                    comments: {
+                        where: { isDeleted: false },
+                        select: {
+                            id: true,
+                            content: true,
+                            createdAt: true,
+                            article: {
+                                select: {
+                                    id: true,
+                                    title: true
+                                }
+                            }
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        take: 10
+                    },
+                    favorites: {
+                        include: {
+                            article: {
+                                select: {
+                                    id: true,
+                                    title: true
+                                }
+                            }
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        take: 10
+                    },
+                    readLater: {
+                        include: {
+                            article: {
+                                select: {
+                                    id: true,
+                                    title: true
+                                }
+                            }
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        take: 10
+                    },
+                    _count: {
+                        select: {
+                            articles: true,
+                            comments: { where: { isDeleted: false } },
+                            favorites: true,
+                            readLater: true,
+                            articleViews: true
+                        }
+                    }
+                }
+            });
+
+            if (!user) {
+                return response.notFound(res, 'User not found');
+            }
+
+            // Format subscription info
+            const latestSubscription = user.subscriptions[0];
+            let subscriptionInfo = {
+                status: 'free',
+                isPremium: false,
+                trialEndsAt: null,
+                history: user.subscriptions
+            };
+
+            if (latestSubscription) {
+                if (latestSubscription.isPremium) {
+                    subscriptionInfo.status = 'premium';
+                    subscriptionInfo.isPremium = true;
+                } else if (latestSubscription.trialEndsAt && new Date(latestSubscription.trialEndsAt) > new Date()) {
+                    subscriptionInfo.status = 'trial';
+                    subscriptionInfo.trialEndsAt = latestSubscription.trialEndsAt;
+                }
+            }
+
+            const userData = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isBanned: user.isBanned,
+                isSocialLogin: user.isSocialLogin,
+                loginType: user.loginType,
+                socialId: user.socialId,
+                image: user.image,
+                imageKey: user.imageKey,
+                country: user.country,
+                phoneNumber: user.phoneNumber,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+                subscription: subscriptionInfo,
+                recentActivity: {
+                    articles: user.articles,
+                    comments: user.comments,
+                    favorites: user.favorites,
+                    readLater: user.readLater
+                },
+                stats: {
+                    articlesCreated: user._count.articles,
+                    commentsCount: user._count.comments,
+                    favoritesCount: user._count.favorites,
+                    readLaterCount: user._count.readLater,
+                    articleViewsCount: user._count.articleViews
+                }
+            };
+
+            logger.info('Admin user details retrieved', { 
+                adminId: req.user.id, 
+                targetUserId: id 
+            });
+
+            return response.success(res, { user: userData }, 'User details retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get user by ID error:', { error: error.message, adminId: req.user?.id, targetUserId: req.params.id });
+            return response.error(res, 'Failed to retrieve user details', 500, error.message);
+        }
+    }
+
+    /**
+     * Toggle user ban status (Admin only)
+     * PATCH /api/users/admin/users/:id/toggle-ban
+     */
+    async toggleUserBan(req, res) {
+        try {
+            const { id } = req.params;
+            const { reason } = req.body;
+
+            const user = await prisma.user.findUnique({
+                where: { id },
+                select: { id: true, email: true, name: true, isBanned: true, role: true }
+            });
+
+            if (!user) {
+                return response.notFound(res, 'User not found');
+            }
+
+            // Prevent banning other admins
+            if (user.role === 'ADMIN') {
+                return response.error(res, 'Cannot ban other administrators', 403);
+            }
+
+            // Prevent self-banning
+            if (user.id === req.user.id) {
+                return response.error(res, 'Cannot ban yourself', 403);
+            }
+
+            const newBanStatus = !user.isBanned;
+
+            const updatedUser = await prisma.user.update({
+                where: { id },
+                data: { isBanned: newBanStatus },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    isBanned: true,
+                    role: true,
+                    createdAt: true
+                }
+            });
+
+            const action = newBanStatus ? 'banned' : 'unbanned';
+            const message = `User ${action} successfully`;
+
+            logger.info(`User ${action}`, {
+                adminId: req.user.id,
+                adminEmail: req.user.email,
+                targetUserId: id,
+                targetUserEmail: user.email,
+                action,
+                reason: reason || 'No reason provided'
+            });
+
+            // Here you could add email notification to the user about ban/unban
+            try {
+                if (newBanStatus) {
+                    // Send ban notification email
+                    // await emailService.sendBanNotificationEmail(user.email, reason);
+                } else {
+                    // Send unban notification email
+                    // await emailService.sendUnbanNotificationEmail(user.email);
+                }
+            } catch (emailError) {
+                logger.error('Failed to send ban/unban notification email:', { 
+                    error: emailError.message,
+                    userEmail: user.email,
+                    action
+                });
+            }
+
+            return response.success(res, { 
+                user: updatedUser,
+                action,
+                reason: reason || null
+            }, message);
+
+        } catch (error) {
+            logger.error('Toggle user ban error:', { 
+                error: error.message, 
+                adminId: req.user?.id, 
+                targetUserId: req.params.id 
+            });
+            return response.error(res, 'Failed to update user ban status', 500, error.message);
+        }
+    }
+
+    /**
+     * Get user statistics dashboard (Admin only)
+     * GET /api/users/admin/stats
+     */
+    async getUserStats(req, res) {
+        try {
+            const { period = '30d' } = req.query;
+
+            // Calculate date range
+            let dateFilter = {};
+            if (period !== 'all') {
+                const days = parseInt(period.replace('d', ''));
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - days);
+                dateFilter = { gte: startDate };
+            }
+
+            const [
+                totalUsers,
+                activeUsers,
+                bannedUsers,
+                adminUsers,
+                socialLoginUsers,
+                premiumUsers,
+                trialUsers,
+                newUsersInPeriod,
+                usersByCountry,
+                subscriptionStats
+            ] = await Promise.all([
+                // Total users
+                prisma.user.count(),
+                
+                // Active users (not banned)
+                prisma.user.count({ where: { isBanned: false } }),
+                
+                // Banned users
+                prisma.user.count({ where: { isBanned: true } }),
+                
+                // Admin users
+                prisma.user.count({ where: { role: 'ADMIN' } }),
+                
+                // Social login users
+                prisma.user.count({ where: { isSocialLogin: true } }),
+                
+                // Premium users
+                prisma.subscription.count({ 
+                    where: { 
+                        isPremium: true,
+                        user: { isBanned: false }
+                    } 
+                }),
+                
+                // Trial users
+                prisma.subscription.count({ 
+                    where: { 
+                        isPremium: false,
+                        trialEndsAt: { gt: new Date() },
+                        user: { isBanned: false }
+                    } 
+                }),
+                
+                // New users in period
+                prisma.user.count({
+                    where: period !== 'all' ? { createdAt: dateFilter } : {}
+                }),
+                
+                // Users by country (top 10)
+                prisma.user.groupBy({
+                    by: ['country'],
+                    _count: { country: true },
+                    where: { 
+                        country: { not: null },
+                        isBanned: false
+                    },
+                    orderBy: { _count: { country: 'desc' } },
+                    take: 10
+                }),
+                
+                // Subscription statistics
+                prisma.subscription.groupBy({
+                    by: ['isPremium'],
+                    _count: { isPremium: true },
+                    where: {
+                        user: { isBanned: false }
+                    }
+                })
+            ]);
+
+            // Get daily user registrations for chart
+            const dailyRegistrations = await prisma.$queryRaw`
+                SELECT 
+                    DATE("createdAt") as date,
+                    COUNT(*) as count
+                FROM users 
+                WHERE "createdAt" >= ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)}
+                GROUP BY DATE("createdAt")
+                ORDER BY date DESC
+                LIMIT 30
+            `;
+
+            // Get top active users
+            const topActiveUsers = await prisma.user.findMany({
+                where: { isBanned: false },
+                include: {
+                    _count: {
+                        select: {
+                            articles: true,
+                            comments: { where: { isDeleted: false } },
+                            favorites: true,
+                            articleViews: true
+                        }
+                    }
+                },
+                orderBy: [
+                    { comments: { _count: 'desc' } },
+                    { favorites: { _count: 'desc' } }
+                ],
+                take: 10
+            });
+
+            const freeUsers = totalUsers - premiumUsers - trialUsers;
+            const conversionRate = totalUsers > 0 ? ((premiumUsers / totalUsers) * 100).toFixed(2) : 0;
+
+            const stats = {
+                overview: {
+                    totalUsers,
+                    activeUsers,
+                    bannedUsers,
+                    adminUsers,
+                    newUsersInPeriod,
+                    socialLoginUsers,
+                    conversionRate: `${conversionRate}%`
+                },
+                subscriptions: {
+                    premium: premiumUsers,
+                    trial: trialUsers,
+                    free: freeUsers,
+                    premiumPercentage: totalUsers > 0 ? ((premiumUsers / totalUsers) * 100).toFixed(2) : 0
+                },
+                geography: usersByCountry.map(item => ({
+                    country: item.country || 'Unknown',
+                    count: item._count.country
+                })),
+                activity: {
+                    dailyRegistrations: dailyRegistrations.map(row => ({
+                        date: row.date,
+                        count: Number(row.count)
+                    })),
+                    topActiveUsers: topActiveUsers.map(user => ({
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        stats: {
+                            articles: user._count.articles,
+                            comments: user._count.comments,
+                            favorites: user._count.favorites,
+                            views: user._count.articleViews
+                        }
+                    }))
+                },
+                period
+            };
+
+            logger.info('User statistics retrieved', { 
+                adminId: req.user.id,
+                period,
+                totalUsers
+            });
+
+            return response.success(res, stats, 'User statistics retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get user stats error:', { error: error.message, adminId: req.user?.id });
+            return response.error(res, 'Failed to retrieve user statistics', 500, error.message);
+        }
+    }
 }
 
 export default UserController;

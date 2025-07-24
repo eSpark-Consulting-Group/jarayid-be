@@ -46,6 +46,10 @@
  *           type: string
  *           format: uuid
  *           description: Associated category ID
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: Article sub-type for categorization
  *         category:
  *           type: object
  *           properties:
@@ -148,6 +152,10 @@
  *           type: string
  *           format: uuid
  *           description: Category ID for this article
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: Article sub-type for categorization
  *         pinned:
  *           type: boolean
  *           default: false
@@ -211,6 +219,10 @@
  *           type: string
  *           format: uuid
  *           description: Category ID for this article
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: Article sub-type for categorization
  *         pinned:
  *           type: boolean
  *           description: Whether the article should be pinned

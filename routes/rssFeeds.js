@@ -129,6 +129,12 @@ router.post('/', auth, adminAuth, singleUpload('logo'), validation.rssFeed.creat
  *           format: uuid
  *         description: Filter by category ID
  *       - in: query
+ *         name: subType
+ *         schema:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *         description: Filter by RSS feed sub-type
+ *       - in: query
  *         name: search
  *         schema:
  *           type: string

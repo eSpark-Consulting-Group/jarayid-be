@@ -325,6 +325,7 @@ class RSSProcessor {
             image,
             imageKey,
             categoryId: rssFeed.categoryId,
+            subType: rssFeed.subType, // Add subType from RSS feed
             publishedAt,
             userId: systemUser.id,
             pinned: false,

@@ -53,6 +53,10 @@ const articleSchema = {
             .uuid()
             .messages(messages)
             .optional(),
+        subType: Joi.string()
+            .valid('SPORTS', 'ECONOMICS', 'POLITICS')
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .default(false)
             .messages(messages)
@@ -105,6 +109,10 @@ const articleSchema = {
             .uuid()
             .messages(messages)
             .optional(),
+        subType: Joi.string()
+            .valid('SPORTS', 'ECONOMICS', 'POLITICS')
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .messages(messages)
             .optional(),
@@ -136,6 +144,10 @@ const articleSchema = {
         categoryId: Joi.string()
             .uuid()
             .messages(messages),
+        subType: Joi.string()
+            .valid('SPORTS', 'ECONOMICS', 'POLITICS')
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .messages(messages),
         search: Joi.string()
