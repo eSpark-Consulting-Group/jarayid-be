@@ -124,6 +124,61 @@ const userSchema = {
                 'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
             })
             .required()
+    }),
+    
+    // Admin validation schemas
+    adminGetUsers: Joi.object({
+        page: Joi.number()
+            .integer()
+            .min(1)
+            .default(1)
+            .messages(messages),
+        limit: Joi.number()
+            .integer()
+            .min(1)
+            .max(100)
+            .default(10)
+            .messages(messages),
+        search: Joi.string()
+            .max(255)
+            .messages(messages)
+            .optional(),
+        role: Joi.string()
+            .valid('USER', 'ADMIN')
+            .messages(messages)
+            .optional(),
+        isBanned: Joi.boolean()
+            .messages(messages)
+            .optional(),
+        isSocialLogin: Joi.boolean()
+            .messages(messages)
+            .optional(),
+        subscriptionStatus: Joi.string()
+            .valid('free', 'trial', 'premium')
+            .messages(messages)
+            .optional(),
+        sortBy: Joi.string()
+            .valid('createdAt', 'updatedAt', 'email', 'name')
+            .default('createdAt')
+            .messages(messages),
+        sortOrder: Joi.string()
+            .valid('asc', 'desc')
+            .default('desc')
+            .messages(messages)
+    }),
+    
+    adminToggleBan: Joi.object({
+        reason: Joi.string()
+            .max(500)
+            .messages(messages)
+            .optional()
+    }),
+    
+    adminUserStats: Joi.object({
+        period: Joi.string()
+            .valid('7d', '30d', '90d', 'all')
+            .default('30d')
+            .messages(messages)
     })
 };
 

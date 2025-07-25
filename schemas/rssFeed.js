@@ -28,7 +28,11 @@ const rssFeedSchema = {
         categoryId: Joi.string()
             .uuid()
             .messages(messages)
-            .required()
+            .required(),
+        subType: Joi.string()
+            .valid('SPORTS', 'ECONOMICS', 'POLITICS')
+            .messages(messages)
+            .optional()
     }),
     params: Joi.object({
         id: Joi.string()
@@ -54,6 +58,10 @@ const rssFeedSchema = {
         categoryId: Joi.string()
             .uuid()
             .messages(messages),
+        subType: Joi.string()
+            .valid('SPORTS', 'ECONOMICS', 'POLITICS')
+            .messages(messages)
+            .optional(),
         search: Joi.string()
             .min(1)
             .max(100)
@@ -73,7 +81,11 @@ const rssFeedSchema = {
             .messages(messages),
         categoryId: Joi.string()
             .uuid()
+            .messages(messages),
+        subType: Joi.string()
+            .valid('SPORTS', 'ECONOMICS', 'POLITICS')
             .messages(messages)
+            .optional()
     })
 };
 

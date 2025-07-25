@@ -32,7 +32,7 @@ class RSSFeedController {
     }
 
     async createRSSFeed(req, res) {
-        const { name, url, status = 'DRAFT', categoryId } = req.body;
+        const { name, url, status = 'DRAFT', categoryId, subType } = req.body;
 
         try {
             const category = await prisma.category.findUnique({
@@ -65,7 +65,8 @@ class RSSFeedController {
                 name,
                 url,
                 status,
-                categoryId
+                categoryId,
+                subType
             };
 
             if (req.file) {
@@ -108,7 +109,7 @@ class RSSFeedController {
 
     async getAllRSSFeeds(req, res) {
         try {
-            const { page = 1, limit = 10, status, categoryId, search } = req.query;
+            const { page = 1, limit = 10, status, categoryId, subType, search } = req.query;
             const { skip, take } = pagination.getPaginationParams(req.query, { 
                 defaultLimit: 10, 
                 maxLimit: 200 
@@ -117,6 +118,7 @@ class RSSFeedController {
             const where = {};
             if (status) where.status = status;
             if (categoryId) where.categoryId = categoryId;
+            if (subType) where.subType = subType;
             if (search) {
                 where.OR = [
                     { name: { contains: search, mode: 'insensitive' } },
@@ -198,7 +200,7 @@ class RSSFeedController {
 
     async updateRSSFeed(req, res) {
         const { id } = req.params;
-        const { name, url, status, categoryId } = req.body;
+        const { name, url, status, categoryId, subType } = req.body;
 
         try {
             const existingRSSFeed = await prisma.rSSFeed.findUnique({
@@ -251,6 +253,7 @@ class RSSFeedController {
             if (url !== undefined) data.url = url;
             if (status !== undefined) data.status = status;
             if (categoryId !== undefined) data.categoryId = categoryId;
+            if (subType !== undefined) data.subType = subType;
 
             if (req.file) {
                 if (existingRSSFeed.logoKey) {

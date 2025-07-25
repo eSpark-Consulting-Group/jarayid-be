@@ -100,11 +100,30 @@ class CategoryController {
         try {
             const { type, search } = req.query;
             
-            // Get pagination parameters
-            const { skip, take, page, limit } = pagination.getPaginationParams(req.query, {
-                defaultLimit: 10,
-                maxLimit: 100
-            });
+            // Check if limit is provided, if not, get all results
+            const hasLimit = req.query.limit !== undefined;
+            
+            let skip, take, page, limit, paginationOptions;
+            
+            if (hasLimit) {
+                // Use pagination when limit is provided
+                const paginationParams = pagination.getPaginationParams(req.query, {
+                    defaultLimit: 10,
+                    maxLimit: 1000
+                });
+                skip = paginationParams.skip;
+                take = paginationParams.take;
+                page = paginationParams.page;
+                limit = paginationParams.limit;
+                paginationOptions = { defaultLimit: 10, maxLimit: 1000 };
+            } else {
+                // No pagination when limit is not provided
+                skip = undefined;
+                take = undefined;
+                page = 1;
+                limit = null;
+                paginationOptions = { defaultLimit: null, maxLimit: 1000 };
+            }
 
             const where = {};
             
@@ -122,8 +141,8 @@ class CategoryController {
             const [categories, total] = await Promise.all([
                 prisma.category.findMany({
                     where,
-                    skip,
-                    take,
+                    skip: skip,
+                    take: take,
                     orderBy: { createdAt: 'desc' },
                     include: {
                         createdBy: {
@@ -172,14 +191,26 @@ class CategoryController {
             }));
 
             // Create paginated response
-            const paginatedData = pagination.createPaginatedResponse(
-                enhancedCategories, 
-                req.query, 
-                total, 
-                { defaultLimit: 10, maxLimit: 100 }
-            );
+            let responseData;
+            if (hasLimit) {
+                responseData = pagination.createPaginatedResponse(
+                    enhancedCategories, 
+                    req.query, 
+                    total, 
+                    paginationOptions
+                );
+            } else {
+                // Return all data without pagination info
+                responseData = {
+                    items: enhancedCategories,
+                    meta: {
+                        itemCount: enhancedCategories.length,
+                        totalItems: total
+                    }
+                };
+            }
 
-            return response.success(res, paginatedData, 'Categories retrieved successfully');
+            return response.success(res, responseData, 'Categories retrieved successfully');
         } catch (error) {
             logger.error('Get categories error:', { error: error?.message || error });
             return response.error(res, 'Failed to retrieve categories', 500);

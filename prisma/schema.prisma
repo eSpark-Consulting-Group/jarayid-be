@@ -9,9 +9,9 @@ datasource db {
 
 model User {
   id                   String           @id @default(uuid())
-  name                 Json?         
+  name                 Json?
   email                String           @unique
-  password             String?          // Made optional for social login
+  password             String? // Made optional for social login
   role                 UserRole         @default(USER)
   isSocialLogin        Boolean          @default(false)
   loginType            String?
@@ -60,39 +60,41 @@ model Category {
 }
 
 model RSSFeed {
-  id         String   @id @default(uuid())
-  name       String   @db.VarChar(500)
-  url        String   @db.VarChar(500)
-  status     Status   @default(DRAFT)
-  logo       String?  @db.VarChar(500)
-  logoKey    String?  @db.VarChar(500)
+  id         String           @id @default(uuid())
+  name       String           @db.VarChar(500)
+  url        String           @db.VarChar(500)
+  status     Status           @default(DRAFT)
+  logo       String?          @db.VarChar(500)
+  logoKey    String?          @db.VarChar(500)
   categoryId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  category   Category @relation(fields: [categoryId], references: [id])
+  subType    CategorySubType?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  category   Category         @relation(fields: [categoryId], references: [id])
 
   @@map("rss_feeds")
 }
 
 model Article {
-  id              String        @id @default(uuid())
-  title           String        @db.VarChar(500)
-  url             String?       @db.VarChar(500)
-  source          String        @db.VarChar(500)
+  id              String           @id @default(uuid())
+  title           String           @db.VarChar(500)
+  url             String?          @db.VarChar(500)
+  source          String           @db.VarChar(500)
   originalContent Json
   summaryArabic   String?
   summaryEnglish  String?
-  image           String?       @db.VarChar(500)
-  imageKey        String?       @db.VarChar(500)
+  image           String?          @db.VarChar(500)
+  imageKey        String?          @db.VarChar(500)
   categoryId      String?
-  pinned          Boolean       @default(false)
-  viewCount       Int           @default(0)
+  subType         CategorySubType?
+  pinned          Boolean          @default(false)
+  viewCount       Int              @default(0)
   publishedAt     DateTime?
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime         @default(now())
   userId          String
   articleViews    ArticleView[]
-  category        Category?     @relation(fields: [categoryId], references: [id])
-  author          User          @relation(fields: [userId], references: [id])
+  category        Category?        @relation(fields: [categoryId], references: [id])
+  author          User             @relation(fields: [userId], references: [id])
   comments        Comment[]
   favorites       Favorite[]
   readLater       ReadLater[]
@@ -115,7 +117,9 @@ model Comment {
 
 model Contact {
   id             String   @id @default(uuid())
+
   userId         String?
+
   name           String   @db.VarChar(500)
   business_name  String   @db.VarChar(150)
   contact_number String   @db.VarChar(20)
@@ -124,9 +128,22 @@ model Contact {
   message        String
   isResponded    Boolean  @default(false)
   createdAt      DateTime @default(now())
+
   user           User?     @relation(fields: [userId], references: [id])
 
+
   @@map("contacts")
+}
+
+
+
+model StaticPage {
+  id        String   @id @default(uuid())
+  title     String   @unique
+  content   String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 
@@ -226,6 +243,12 @@ enum CategoryType {
   MEDIA
 }
 
+enum CategorySubType {
+  SPORTS
+  ECONOMICS
+  POLITICS
+}
+
 enum UserRole {
   ADMIN
   USER
@@ -246,12 +269,5 @@ enum YouTubeContentType {
   FULL_VIDEO
 }
 
-model StaticPage {
-  id        String   @id @default(uuid())
-  title     String   @unique
-  content   String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+
 

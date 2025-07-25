@@ -51,3 +51,6 @@ export default {
 export const auth = jwtGuard;
 export const adminAuth = roleGuard(['ADMIN']);
 export const userAuth = roleGuard(['USER', 'ADMIN']);
+
+// Special admin auth middleware for admin user management
+export const adminUserAuth = [jwtGuard, roleGuard(['ADMIN'])];

@@ -3,12 +3,27 @@ import { Router } from 'express';
 import userSchema from '../schemas/index.js';
 import createValidationMiddleware from '../middleware/validate.js';
 import UserController from '../controllers/index.js';
-import {auth,userAuth} from '../middleware/auth.js';
+import {auth, userAuth, adminUserAuth} from '../middleware/auth.js';
 import { singleUpload } from '../middleware/index.js';
 
 const router = Router();
 const userController = new UserController();
 const validation = createValidationMiddleware(userSchema);
+
+// Create query validation middleware
+const createQueryValidator = (schema) => {
+    return (req, res, next) => {
+        const { error, value } = schema.validate(req.query);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: error.details[0].message
+            });
+        }
+        req.query = value;
+        next();
+    };
+};
 
 // routes/users.js
 /**
@@ -291,5 +306,344 @@ router.post('/reset-password', validation.user.resetPassword, userController.res
  *         description: Internal server error
  */
 router.post('/set-password', auth, validation.user.setPassword, userController.setPassword);
+
+// Admin Routes - User Management
+/**
+ * @swagger
+ * /users/admin/users:
+ *   get:
+ *     summary: Get all users with advanced filtering and search (Admin only)
+ *     tags: [Admin - User Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of users per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in name, email, phone, or country
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [USER, ADMIN]
+ *         description: Filter by user role
+ *       - in: query
+ *         name: isBanned
+ *         schema:
+ *           type: boolean
+ *         description: Filter by ban status
+ *       - in: query
+ *         name: isSocialLogin
+ *         schema:
+ *           type: boolean
+ *         description: Filter by social login users
+ *       - in: query
+ *         name: subscriptionStatus
+ *         schema:
+ *           type: string
+ *           enum: [free, trial, premium]
+ *         description: Filter by subscription status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Users retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: object
+ *                           email:
+ *                             type: string
+ *                           role:
+ *                             type: string
+ *                           isBanned:
+ *                             type: boolean
+ *                           subscription:
+ *                             type: object
+ *                             properties:
+ *                               status:
+ *                                 type: string
+ *                               isPremium:
+ *                                 type: boolean
+ *                           stats:
+ *                             type: object
+ *                             properties:
+ *                               articlesCreated:
+ *                                 type: integer
+ *                               commentsCount:
+ *                                 type: integer
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/users', createQueryValidator(userSchema.user.adminGetUsers), ...adminUserAuth, userController.getAllUsers);
+
+/**
+ * @swagger
+ * /users/admin/users/{id}:
+ *   get:
+ *     summary: Get user details by ID (Admin only)
+ *     tags: [Admin - User Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User details retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: object
+ *                         email:
+ *                           type: string
+ *                         role:
+ *                           type: string
+ *                         isBanned:
+ *                           type: boolean
+ *                         subscription:
+ *                           type: object
+ *                           properties:
+ *                             status:
+ *                               type: string
+ *                             history:
+ *                               type: array
+ *                         recentActivity:
+ *                           type: object
+ *                           properties:
+ *                             articles:
+ *                               type: array
+ *                             comments:
+ *                               type: array
+ *                         stats:
+ *                           type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/users/:id', ...adminUserAuth, userController.getUserById);
+
+/**
+ * @swagger
+ * /users/admin/users/{id}/toggle-ban:
+ *   patch:
+ *     summary: Ban or unban a user (Admin only)
+ *     tags: [Admin - User Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to ban/unban
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for banning/unbanning
+ *                 example: "Violated community guidelines"
+ *     responses:
+ *       200:
+ *         description: User ban status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User banned successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         isBanned:
+ *                           type: boolean
+ *                     action:
+ *                       type: string
+ *                       example: "banned"
+ *                     reason:
+ *                       type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required or cannot ban admins
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/admin/users/:id/toggle-ban', validation.user.adminToggleBan, ...adminUserAuth, userController.toggleUserBan);
+
+/**
+ * @swagger
+ * /users/admin/stats:
+ *   get:
+ *     summary: Get comprehensive user statistics dashboard (Admin only)
+ *     tags: [Admin - User Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [7d, 30d, 90d, all]
+ *           default: 30d
+ *         description: Time period for statistics
+ *     responses:
+ *       200:
+ *         description: User statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User statistics retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     overview:
+ *                       type: object
+ *                       properties:
+ *                         totalUsers:
+ *                           type: integer
+ *                         activeUsers:
+ *                           type: integer
+ *                         bannedUsers:
+ *                           type: integer
+ *                         adminUsers:
+ *                           type: integer
+ *                         conversionRate:
+ *                           type: string
+ *                     subscriptions:
+ *                       type: object
+ *                       properties:
+ *                         premium:
+ *                           type: integer
+ *                         trial:
+ *                           type: integer
+ *                         free:
+ *                           type: integer
+ *                     geography:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           country:
+ *                             type: string
+ *                           count:
+ *                             type: integer
+ *                     activity:
+ *                       type: object
+ *                       properties:
+ *                         dailyRegistrations:
+ *                           type: array
+ *                         topActiveUsers:
+ *                           type: array
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/stats', createQueryValidator(userSchema.user.adminUserStats), ...adminUserAuth, userController.getUserStats);
 
 export default router;

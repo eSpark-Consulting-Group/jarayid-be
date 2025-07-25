@@ -32,6 +32,10 @@
  *           type: string
  *           format: uuid
  *           description: Associated category ID
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: RSS feed sub-type for categorization
  *         category:
  *           type: object
  *           properties:
@@ -69,6 +73,10 @@
  *           type: string
  *           format: uuid
  *           description: Category ID for this RSS feed
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: RSS feed sub-type for categorization
  *         status:
  *           type: string
  *           enum: [DRAFT, PUBLISH, ARCHIVE]
@@ -104,6 +112,10 @@
  *           type: string
  *           format: uuid
  *           description: Category ID for this RSS feed
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: RSS feed sub-type for categorization
  *         status:
  *           type: string
  *           enum: [DRAFT, PUBLISH, ARCHIVE]
