@@ -126,7 +126,8 @@ process.on('SIGTERM', async () => {
         logger.error('Error shutting down AI Summary Queue Service:', error);
     }
     
-    await prisma.$disconnect();
+    // Use the centralized disconnect function
+    await disconnectPrisma();
     process.exit(0);
 });
 
@@ -147,7 +148,8 @@ process.on('SIGINT', async () => {
         logger.error('Error shutting down AI Summary Queue Service:', error);
     }
     
-    await prisma.$disconnect();
+    // Use the centralized disconnect function
+    await disconnectPrisma();
     process.exit(0);
 });
 

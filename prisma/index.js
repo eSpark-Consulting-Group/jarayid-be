@@ -25,7 +25,12 @@ const prisma = new PrismaClient({
         { emit: 'event', level: 'warn' },
         { emit: 'event', level: 'error' }
     ],
-    errorFormat: 'pretty'
+    errorFormat: 'pretty',
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL
+        }
+    }
 });
 
 // Setup Prisma event logging
