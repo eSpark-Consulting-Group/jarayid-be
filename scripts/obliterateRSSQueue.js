@@ -20,30 +20,30 @@ const rssQueue = new Queue('RSS Processing', {
 
 async function obliterateQueue() {
     try {
-        // console.log('💥 OBLITERATING RSS Queue...');
-        // console.log('⚠️  This will completely destroy all jobs and queue data!');
+console.log('💥 OBLITERATING RSS Queue...');
+console.log('⚠️  This will completely destroy all jobs and queue data!');
         
         // Use obliterate to completely destroy the queue
         await rssQueue.obliterate({ force: true });
         
-        // console.log('🎉 Queue completely obliterated!');
-        // console.log('📝 All jobs, schedules, and queue data have been removed.');
-        // console.log('🚀 Ready for fresh start!');
+console.log('🎉 Queue completely obliterated!');
+console.log('📝 All jobs, schedules, and queue data have been removed.');
+console.log('🚀 Ready for fresh start!');
         
     } catch (error) {
         console.error('❌ Error obliterating queue:', error.message);
     } finally {
         // Close the queue connection
         await rssQueue.close();
-        // console.log('\n🔌 Queue connection closed.');
+console.log('\n🔌 Queue connection closed.');
         process.exit(0);
     }
 }
 
 // Run the obliteration
-// console.log('💥 RSS Queue OBLITERATION Tool');
-// console.log('================================\n');
-// console.log('⚠️  WARNING: This will completely destroy the queue!');
+console.log('💥 RSS Queue OBLITERATION Tool');
+console.log('================================\n');
+console.log('⚠️  WARNING: This will completely destroy the queue!');
 
 obliterateQueue().catch(error => {
     console.error('💥 Fatal error:', error);
