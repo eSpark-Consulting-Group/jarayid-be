@@ -9,7 +9,7 @@ import commentsRouter from './comments.js';
 import aiSummaryRouter from './aiSummary.js';
 import youtubeContentRouter from './youtubeContent.js';
 import staticPagesRouter from './staticPages.js';
-import contactUsRoutes from "./contactUs.js";
+import contactUsRoutes from "./contact.js";
 
 
 // User related routes
