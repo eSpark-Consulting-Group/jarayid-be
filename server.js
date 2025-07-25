@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { PrismaClient } from '@prisma/client';
+import prisma from './prisma/index.js';
 import winston from 'winston';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './docs/swagger.js';
@@ -34,7 +34,6 @@ if (configs.NODE_ENV !== 'production') {
 }
 
 const app = express();
-const prisma = new PrismaClient();
 
 // Middleware
 app.use(helmet());

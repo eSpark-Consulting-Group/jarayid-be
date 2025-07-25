@@ -244,6 +244,7 @@ router.get('/', validation.category.query, categoryController.getAllCategories);
  */
 router.get('/:id', validation.category.params, categoryController.getCategoryById);
 
+
 /**
  * @swagger
  * /categories/{id}:

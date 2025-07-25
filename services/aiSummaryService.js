@@ -1,4 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/index.js';
+
+
 import winston from 'winston';
 import openaiService from './openaiService.js';
 import webScraperService from './webScraperService.js';
@@ -21,7 +23,7 @@ const logger = winston.createLogger({
     ]
 });
 
-const prisma = new PrismaClient();
+
 
 class AISummaryService {
     /**

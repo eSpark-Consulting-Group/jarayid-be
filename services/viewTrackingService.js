@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/index.js';
+
 import winston from 'winston';
 
 // Logger configuration
@@ -18,8 +19,6 @@ const logger = winston.createLogger({
         })
     ]
 });
-
-const prisma = new PrismaClient();
 
 class ViewTrackingService {
     /**

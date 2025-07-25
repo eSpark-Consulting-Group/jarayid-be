@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { response, pagination } from '../utils/index.js';
 import { cloudinaryService } from '../services/index.js';
 import winston from 'winston';
+import prisma from '../prisma/index.js';
 
 
 // Logger configuration
@@ -21,8 +21,6 @@ const logger = winston.createLogger({
         })
     ]
 });
-
-const prisma = new PrismaClient();
 
 class CategoryController {
     constructor() {
@@ -414,6 +412,8 @@ class CategoryController {
             return response.error(res, 'Failed to delete category', 500);
         }
     }
+
+  
 }
 
 export default CategoryController;

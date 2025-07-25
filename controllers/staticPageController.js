@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from '../prisma/index.js';
+
 import { response, pagination } from "../utils/index.js";
 import { cloudinaryService } from "../services/index.js";
 import winston from "winston";
@@ -21,7 +22,6 @@ const logger = winston.createLogger({
   ],
 });
 
-const prisma = new PrismaClient();
 
 class StaticPageController {
   constructor() {

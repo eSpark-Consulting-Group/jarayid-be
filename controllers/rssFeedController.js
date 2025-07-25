@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/index.js';
 
 import { response, pagination } from '../utils/index.js';
 import { cloudinaryService, rssProcessor, rssQueueService } from '../services/index.js';
@@ -24,7 +24,6 @@ const logger = winston.createLogger({
     ]
 });
 
-const prisma = new PrismaClient();
 
 class RSSFeedController {
     constructor() {

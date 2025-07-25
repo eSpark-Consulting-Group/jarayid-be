@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from '../prisma/index.js';
+
 import winston from "winston";
 
 import { response, pagination } from "../utils/index.js";
@@ -21,7 +22,6 @@ const logger = winston.createLogger({
   ],
 });
 
-const prisma = new PrismaClient();
 
 class ContactController {
   constructor() {

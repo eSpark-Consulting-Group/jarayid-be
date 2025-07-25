@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+
 import winston from 'winston';
 import { response, pagination } from '../utils/index.js';
 
@@ -21,7 +21,6 @@ const logger = winston.createLogger({
     ]
 });
 
-const prisma = new PrismaClient();
 
 class YouTubeContentController {
     /**

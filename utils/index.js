@@ -4,5 +4,6 @@ import generateToken from './token.js';
 import pagination from './pagination.js';
 import { generateHashedPassword } from './password.js';
 import RSSFeedChecker from './rssFeedChecker.js';
+import shareLink from './shareLink.js';
 
-export { response, generateToken, pagination, generateHashedPassword, RSSFeedChecker };
+export { response, generateToken, pagination, generateHashedPassword, RSSFeedChecker, shareLink };

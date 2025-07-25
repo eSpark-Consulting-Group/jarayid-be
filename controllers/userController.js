@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
 
 import { response, generateToken,generateHashedPassword } from '../utils/index.js';
 import { cloudinaryService, emailService, passwordResetService } from '../services/index.js';
 import winston from 'winston';
+import prisma from '../prisma/index.js';
 
 
 // Logger configuration
@@ -23,9 +23,6 @@ const logger = winston.createLogger({
         })
     ]
 });
-
-const prisma = new PrismaClient();
-
 
 class UserController {
     constructor() {

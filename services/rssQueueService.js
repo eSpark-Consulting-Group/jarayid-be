@@ -3,7 +3,8 @@ import Redis from 'ioredis';
 import winston from 'winston';
 import { REDIS_CONFIG, RSS_PROCESSING_CONFIG } from '../config/config.js';
 import rssProcessor from './rssProcessor.js';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/index.js';
+
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -22,8 +23,6 @@ const logger = winston.createLogger({
         })
     ]
 });
-
-const prisma = new PrismaClient();
 
 // Redis connection for Bull - Bull has specific requirements for Redis config
 const redisConfig = {

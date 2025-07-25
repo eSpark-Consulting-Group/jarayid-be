@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/index.js';
+
 import winston from 'winston';
 import cloudinaryService from './cloudinaryService.js';
 import openaiService from './openaiService.js';
@@ -22,7 +23,7 @@ const logger = winston.createLogger({
     ]
 });
 
-const prisma = new PrismaClient();
+
 
 class RSSProcessor {
     /**

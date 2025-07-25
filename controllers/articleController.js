@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import winston from 'winston';
-import { response, pagination } from '../utils/index.js';
+import { response, pagination, shareLink } from '../utils/index.js';
 import { cloudinaryService, viewTrackingService } from '../services/index.js';
+import prisma from '../prisma/index.js';
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -20,8 +20,6 @@ const logger = winston.createLogger({
         })
     ]
 });
-
-const prisma = new PrismaClient();
 
 class ArticleController {
     constructor() {
@@ -220,8 +218,13 @@ class ArticleController {
                 readLater: undefined
             })) : articles;
 
+            // Add share links to all articles
+            const articlesWithShareLinks = articlesWithUserData.map(article => 
+                shareLink.addShareLinksToArticle(article)
+            );
+
             // Track views for articles if requested (optional - use trackViews=true in query)
-            if (trackViews === 'true' && articlesWithUserData.length > 0) {
+            if (trackViews === 'true' && articlesWithShareLinks.length > 0) {
                 try {
                     const viewContext = req.clientInfo ? req.clientInfo.getViewContext() : {
                         userId: req.user?.id || null,
@@ -234,7 +237,7 @@ class ArticleController {
                     };
 
                     // Track views for all articles in bulk (non-blocking)
-                    const viewTrackingPromises = articlesWithUserData.map(article => 
+                    const viewTrackingPromises = articlesWithShareLinks.map(article => 
                         viewTrackingService.trackArticleView(article.id, {
                             ...viewContext,
                             // Add context that this is a bulk view tracking
@@ -256,13 +259,13 @@ class ArticleController {
                     logger.warn('Bulk view tracking initialization failed:', { 
                         error: viewTrackingError.message,
                         userId: req.user?.id,
-                        articleCount: articlesWithUserData.length
+                        articleCount: articlesWithShareLinks.length
                     });
                 }
             }
 
             const paginatedResponse = pagination.createPaginatedResponse(
-                articlesWithUserData,
+                articlesWithShareLinks,
                 req.query,
                 total,
                 {
@@ -278,7 +281,7 @@ class ArticleController {
             // Add view tracking info to meta if enabled
             if (trackViews === 'true') {
                 paginatedResponse.meta.viewTrackingEnabled = true;
-                paginatedResponse.meta.trackedArticles = articlesWithUserData.length;
+                paginatedResponse.meta.trackedArticles = articlesWithShareLinks.length;
             }
 
             return response.success(res, paginatedResponse, 'Articles retrieved successfully');
@@ -357,10 +360,13 @@ class ArticleController {
                 delete article.readLater;
             }
 
+            // Add share links to the article
+            const articleWithShareLinks = shareLink.addShareLinksToArticle(article);
+
             // Track article view with sophisticated logic
             try {
                 await viewTrackingService.trackArticleView(
-                    article.id, 
+                    articleWithShareLinks.id, 
                     req.clientInfo ? req.clientInfo.getViewContext() : {
                         userId: req.user?.id || null,
                         userRole: req.user?.role || null,
@@ -375,12 +381,12 @@ class ArticleController {
                 // Log error but don't fail the request
                 logger.warn('View tracking failed:', { 
                     error: viewTrackingError.message, 
-                    articleId: article.id,
+                    articleId: articleWithShareLinks.id,
                     userId: req.user?.id
                 });
             }
 
-            return response.success(res, { article }, 'Article retrieved successfully');
+            return response.success(res, { article: articleWithShareLinks }, 'Article retrieved successfully');
         } catch (error) {
             logger.error('Get Article error:', { error: error.message, articleId: req.params.id });
             return response.error(res, 'Failed to retrieve article', 500, error.message);
