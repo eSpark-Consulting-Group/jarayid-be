@@ -8,6 +8,9 @@ import articlesRouter from './articles.js';
 import commentsRouter from './comments.js';
 import aiSummaryRouter from './aiSummary.js';
 import youtubeContentRouter from './youtubeContent.js';
+import staticPagesRouter from './staticPages.js';
+import contactUsRoutes from "./contact.js";
+
 
 // User related routes
 router.use('/users', usersRouter);
@@ -29,5 +32,11 @@ router.use('/ai-summary', aiSummaryRouter);
 
 // YouTube Content related routes
 router.use('/youtube-content', youtubeContentRouter);
+
+// Static pages related routes
+router.use("/static-pages", staticPagesRouter);
+
+// Contact Us related routes
+router.use("/contact-us", contactUsRoutes);
 
 export default router;

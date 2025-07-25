@@ -176,6 +176,7 @@
  *         summaryArabic: "ملخص المقال باللغة العربية"
  *         summaryEnglish: "Article summary in English"
  *         categoryId: "550e8400-e29b-41d4-a716-446655440000"
+ *         subType: "ECONOMICS"
  *         pinned: false
  *         publishedAt: "2025-01-10T12:00:00Z"
  *     
@@ -233,6 +234,7 @@
  *       example:
  *         title: "Updated: Technology Breakthrough Details"
  *         summaryEnglish: "Updated summary with more details"
+ *         subType: "SPORTS"
  *         pinned: true
  *     
  *     PaginatedArticles:
