@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import prisma from './prisma/index.js';
+import prisma, { disconnectPrisma } from './prisma/index.js';
 import winston from 'winston';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './docs/swagger.js';
