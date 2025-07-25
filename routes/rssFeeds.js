@@ -44,6 +44,10 @@ const validation = createValidationMiddleware(schemas);
  *                 type: string
  *                 format: uuid
  *                 description: Category ID for this RSS feed
+ *               subType:
+ *                 type: string
+ *                 enum: [SPORTS, ECONOMICS, POLITICS]
+ *                 description: RSS feed sub-type for categorization
  *               status:
  *                 type: string
  *                 enum: [DRAFT, PUBLISH, ARCHIVE]
@@ -57,6 +61,7 @@ const validation = createValidationMiddleware(schemas);
  *             name: "TechCrunch Technology Feed"
  *             url: "https://techcrunch.com/feed/"
  *             categoryId: "550e8400-e29b-41d4-a716-446655440000"
+ *             subType: "ECONOMICS"
  *             status: "PUBLISH"
  *     responses:
  *       201:
@@ -259,6 +264,10 @@ router.get('/:id', auth, validation.rssFeed.params, rssFeedController.getRSSFeed
  *                 type: string
  *                 format: uuid
  *                 description: Category ID for this RSS feed
+ *               subType:
+ *                 type: string
+ *                 enum: [SPORTS, ECONOMICS, POLITICS]
+ *                 description: RSS feed sub-type for categorization
  *               status:
  *                 type: string
  *                 enum: [DRAFT, PUBLISH, ARCHIVE]
@@ -270,6 +279,7 @@ router.get('/:id', auth, validation.rssFeed.params, rssFeedController.getRSSFeed
  *           example:
  *             name: "Updated TechCrunch Feed"
  *             url: "https://techcrunch.com/feed/"
+ *             subType: "SPORTS"
  *             status: "PUBLISH"
  *     responses:
  *       200:
