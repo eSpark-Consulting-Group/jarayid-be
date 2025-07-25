@@ -4,8 +4,8 @@ import { openaiService } from '../services/index.js';
  * Test OpenAI Article Summarization
  */
 async function testOpenAISummarization() {
-    // console.log('🤖 Testing OpenAI Article Summarization\n');
-    // console.log('========================================\n');
+console.log('🤖 Testing OpenAI Article Summarization\n');
+console.log('========================================\n');
 
     // Sample article content (real news article)
     const sampleContent = `
@@ -17,24 +17,24 @@ async function testOpenAISummarization() {
     try {
         // Check if OpenAI service is available
         if (!openaiService.isAvailable()) {
-            // console.log('❌ OpenAI service is not available. To enable:');
-            // console.log('   1. Get an API key from https://platform.openai.com/api-keys');
-            // console.log('   2. Add OPENAI_API_KEY to your .env file');
-            // console.log('   3. Set OPENAI_ENABLED=true in your .env file');
-            // console.log('   4. Restart the application\n');
+console.log('❌ OpenAI service is not available. To enable:');
+console.log('   1. Get an API key from https://platform.openai.com/api-keys');
+console.log('   2. Add OPENAI_API_KEY to your .env file');
+console.log('   3. Set OPENAI_ENABLED=true in your .env file');
+console.log('   4. Restart the application\n');
             
-            // console.log('🔄 Testing fallback summarization instead...');
+console.log('🔄 Testing fallback summarization instead...');
             const fallbackSummary = openaiService.generateFallbackSummary(sampleContent, 200);
-            // console.log('📝 Fallback Summary (200 chars):');
-            // console.log(`"${fallbackSummary}"\n`);
+console.log('📝 Fallback Summary (200 chars):');
+console.log(`"${fallbackSummary}"\n`);
             return;
         }
 
-        // console.log('✅ OpenAI service is available');
-        // console.log(`📰 Testing with article: "${sampleTitle}"\n`);
+console.log('✅ OpenAI service is available');
+console.log(`📰 Testing with article: "${sampleTitle}"\n`);
 
         // Test English summary
-        // console.log('🔄 Generating English summary...');
+console.log('🔄 Generating English summary...');
         const startTime = Date.now();
         
         const englishSummary = await openaiService.generateSummary(
@@ -46,14 +46,14 @@ async function testOpenAISummarization() {
         const englishTime = Date.now() - startTime;
 
         if (englishSummary) {
-            // console.log(`✅ English Summary (${englishTime}ms):`);
-            // console.log(`"${englishSummary}"\n`);
+console.log(`✅ English Summary (${englishTime}ms):`);
+console.log(`"${englishSummary}"\n`);
         } else {
-            // console.log('❌ Failed to generate English summary\n');
+console.log('❌ Failed to generate English summary\n');
         }
 
         // Test Arabic summary
-        // console.log('🔄 Generating Arabic summary...');
+console.log('🔄 Generating Arabic summary...');
         const arabicStartTime = Date.now();
         
         const arabicSummary = await openaiService.generateSummary(
@@ -65,14 +65,14 @@ async function testOpenAISummarization() {
         const arabicTime = Date.now() - arabicStartTime;
 
         if (arabicSummary) {
-            // console.log(`✅ Arabic Summary (${arabicTime}ms):`);
-            // console.log(`"${arabicSummary}"\n`);
+console.log(`✅ Arabic Summary (${arabicTime}ms):`);
+console.log(`"${arabicSummary}"\n`);
         } else {
-            // console.log('❌ Failed to generate Arabic summary\n');
+console.log('❌ Failed to generate Arabic summary\n');
         }
 
         // Test bilingual generation (parallel processing)
-        // console.log('🚀 Testing parallel bilingual summary generation...');
+console.log('🚀 Testing parallel bilingual summary generation...');
         const bilingualStartTime = Date.now();
         
         const bilingualSummaries = await openaiService.generateBilingualSummaries(
@@ -82,37 +82,37 @@ async function testOpenAISummarization() {
 
         const bilingualTime = Date.now() - bilingualStartTime;
 
-        // console.log(`⚡ Bilingual Results (${bilingualTime}ms total):`);
-        // console.log(`📊 English: ${bilingualSummaries.english ? '✅ Generated' : '❌ Failed'}`);
-        // console.log(`📊 Arabic: ${bilingualSummaries.arabic ? '✅ Generated' : '❌ Failed'}`);
+console.log(`⚡ Bilingual Results (${bilingualTime}ms total):`);
+console.log(`📊 English: ${bilingualSummaries.english ? '✅ Generated' : '❌ Failed'}`);
+console.log(`📊 Arabic: ${bilingualSummaries.arabic ? '✅ Generated' : '❌ Failed'}`);
 
         if (bilingualSummaries.english) {
-            // console.log(`\n🇺🇸 English: "${bilingualSummaries.english}"`);
+console.log(`\n🇺🇸 English: "${bilingualSummaries.english}"`);
         }
         if (bilingualSummaries.arabic) {
-            // console.log(`\n🇸🇦 Arabic: "${bilingualSummaries.arabic}"`);
+console.log(`\n🇸🇦 Arabic: "${bilingualSummaries.arabic}"`);
         }
 
         // Performance comparison
-        // console.log('\n📈 Performance Analysis:');
-        // console.log(`   Individual calls: ${englishTime + arabicTime}ms`);
-        // console.log(`   Parallel calls: ${bilingualTime}ms`);
-        // console.log(`   Speed improvement: ${Math.round(((englishTime + arabicTime - bilingualTime) / (englishTime + arabicTime)) * 100)}%`);
+console.log('\n📈 Performance Analysis:');
+console.log(`   Individual calls: ${englishTime + arabicTime}ms`);
+console.log(`   Parallel calls: ${bilingualTime}ms`);
+console.log(`   Speed improvement: ${Math.round(((englishTime + arabicTime - bilingualTime) / (englishTime + arabicTime)) * 100)}%`);
 
         // Test fallback method
-        // console.log('\n🔄 Testing fallback summary method...');
+console.log('\n🔄 Testing fallback summary method...');
         const fallbackSummary = openaiService.generateFallbackSummary(sampleContent, 150);
-        // console.log('📝 Fallback Summary:');
-        // console.log(`"${fallbackSummary}"`);
+console.log('📝 Fallback Summary:');
+console.log(`"${fallbackSummary}"`);
 
-        // console.log('\n🎉 OpenAI integration test completed successfully!');
+console.log('\n🎉 OpenAI integration test completed successfully!');
 
     } catch (error) {
         console.error('❌ Error testing OpenAI summarization:', error);
-        // console.log('\n🔄 Testing fallback method...');
+console.log('\n🔄 Testing fallback method...');
         const fallbackSummary = openaiService.generateFallbackSummary(sampleContent, 200);
-        // console.log('📝 Fallback Summary:');
-        // console.log(`"${fallbackSummary}"`);
+console.log('📝 Fallback Summary:');
+console.log(`"${fallbackSummary}"`);
     }
 }
 
@@ -120,7 +120,7 @@ async function testOpenAISummarization() {
  * Test with actual RSS content format
  */
 async function testWithRSSFormat() {
-    // console.log('\n🔄 Testing with RSS-like content format...');
+console.log('\n🔄 Testing with RSS-like content format...');
     
     // Simulate RSS item content
     const rssContent = {
@@ -135,28 +135,28 @@ async function testWithRSSFormat() {
             rssContent.title
         );
 
-        // console.log('📊 RSS Format Test Results:');
-        // console.log(`✅ English: ${summaries.english || 'Failed'}`);
-        // console.log(`✅ Arabic: ${summaries.arabic || 'Failed'}`);
+console.log('📊 RSS Format Test Results:');
+console.log(`✅ English: ${summaries.english || 'Failed'}`);
+console.log(`✅ Arabic: ${summaries.arabic || 'Failed'}`);
     } else {
-        // console.log('⚠️  OpenAI not available, using fallback...');
+console.log('⚠️  OpenAI not available, using fallback...');
         const fallback = openaiService.generateFallbackSummary(rssContent.content_text, 150);
-        // console.log(`📝 Fallback: ${fallback}`);
+console.log(`📝 Fallback: ${fallback}`);
     }
 }
 
 // Run the tests
-// console.log('🚀 Starting OpenAI Integration Tests...\n');
+console.log('🚀 Starting OpenAI Integration Tests...\n');
 
 testOpenAISummarization()
     .then(() => testWithRSSFormat())
     .then(() => {
-        // console.log('\n✅ All tests completed!');
-        // console.log('\n📋 Next Steps:');
-        // console.log('1. Add your OpenAI API key to .env file');
-        // console.log('2. Set OPENAI_ENABLED=true in .env file');
-        // console.log('3. Restart your RSS processing service');
-        // console.log('4. Your articles will now get AI-powered summaries! 🎉');
+console.log('\n✅ All tests completed!');
+console.log('\n📋 Next Steps:');
+console.log('1. Add your OpenAI API key to .env file');
+console.log('2. Set OPENAI_ENABLED=true in .env file');
+console.log('3. Restart your RSS processing service');
+console.log('4. Your articles will now get AI-powered summaries! 🎉');
     })
     .catch((error) => {
         console.error('❌ Test failed:', error);
