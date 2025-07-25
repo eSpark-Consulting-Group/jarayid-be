@@ -79,6 +79,12 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  *           format: uuid
  *         description: Filter by category ID
  *       - in: query
+ *         name: subType
+ *         schema:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *         description: Filter by article sub-type
+ *       - in: query
  *         name: pinned
  *         schema:
  *           type: boolean

@@ -46,6 +46,10 @@
  *           type: string
  *           format: uuid
  *           description: Associated category ID
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: Article sub-type for categorization
  *         category:
  *           type: object
  *           properties:
@@ -148,6 +152,10 @@
  *           type: string
  *           format: uuid
  *           description: Category ID for this article
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: Article sub-type for categorization
  *         pinned:
  *           type: boolean
  *           default: false
@@ -168,6 +176,7 @@
  *         summaryArabic: "ملخص المقال باللغة العربية"
  *         summaryEnglish: "Article summary in English"
  *         categoryId: "550e8400-e29b-41d4-a716-446655440000"
+ *         subType: "ECONOMICS"
  *         pinned: false
  *         publishedAt: "2025-01-10T12:00:00Z"
  *     
@@ -211,6 +220,10 @@
  *           type: string
  *           format: uuid
  *           description: Category ID for this article
+ *         subType:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *           description: Article sub-type for categorization
  *         pinned:
  *           type: boolean
  *           description: Whether the article should be pinned
@@ -221,6 +234,7 @@
  *       example:
  *         title: "Updated: Technology Breakthrough Details"
  *         summaryEnglish: "Updated summary with more details"
+ *         subType: "SPORTS"
  *         pinned: true
  *     
  *     PaginatedArticles:

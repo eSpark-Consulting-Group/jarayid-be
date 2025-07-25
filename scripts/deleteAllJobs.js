@@ -250,7 +250,7 @@ async function main() {
                 await deleteJobsByType('ai');
                 break;
             case 'help':
-                // console.log(`
+                console.log(`
 Usage: node deleteAllJobs.js [command]
 
 Commands:
