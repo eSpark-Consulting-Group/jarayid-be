@@ -65,7 +65,7 @@ class EmailService {
             };
 
             const result = await this.transporter.sendMail(mailOptions);
-console.log(`Email sent successfully to ${to}:`, result.messageId);
+            // console.log(`Email sent successfully to ${to}:`, result.messageId);
             return result;
         } catch (error) {
             console.error(`Error sending email to ${to}:`, error);
@@ -155,7 +155,7 @@ Jarayid Team`,
     async verifyConnection() {
         try {
             await this.transporter.verify();
-console.log('Email transporter is ready to send messages');
+            // console.log('Email transporter is ready to send messages');
             return true;
         } catch (error) {
             console.error('Email transporter verification failed:', error);
