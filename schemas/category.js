@@ -34,24 +34,7 @@ const categorySchema = {
             .messages(messages)
             .optional(),
         seoMeta: Joi.string()
-            .custom((value, helpers) => {
-                try {
-                    const parsed = JSON.parse(value);
-                    const schema = Joi.object({
-                        title: Joi.string().max(200).optional(),
-                        description: Joi.string().max(500).optional(),
-                        keywords: Joi.array().items(Joi.string()).optional(),
-                        ogImage: Joi.string().uri().optional(),
-                        canonicalUrl: Joi.string().uri().optional()
-                    });
-                    const { error } = schema.validate(parsed);
-                    if (error) throw error;
-                    return parsed;
-                } catch (error) {
-                    return helpers.error('seoMeta.invalid');
-                }
-            })
-            .messages({...messages, 'seoMeta.invalid': 'SEO meta must be valid JSON object'})
+            .messages(messages)
             .optional(),
         thresholdDays: Joi.number()
             .integer()
@@ -83,24 +66,7 @@ const categorySchema = {
             .messages(messages)
             .optional(),
         seoMeta: Joi.string()
-            .custom((value, helpers) => {
-                try {
-                    const parsed = JSON.parse(value);
-                    const schema = Joi.object({
-                        title: Joi.string().max(200).optional(),
-                        description: Joi.string().max(500).optional(),
-                        keywords: Joi.array().items(Joi.string()).optional(),
-                        ogImage: Joi.string().uri().optional(),
-                        canonicalUrl: Joi.string().uri().optional()
-                    });
-                    const { error } = schema.validate(parsed);
-                    if (error) throw error;
-                    return parsed;
-                } catch (error) {
-                    return helpers.error('seoMeta.invalid');
-                }
-            })
-            .messages({...messages, 'seoMeta.invalid': 'SEO meta must be valid JSON object'})
+            .messages(messages)
             .optional(),
         thresholdDays: Joi.number()
             .integer()
