@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import winston from "winston";
 
-import { response } from "../utils/index.js";
+import { response, pagination } from "../utils/index.js";
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -175,18 +175,55 @@ class ContactController {
 
   async getAllContacts(req, res) {
     try {
-      const contacts = await prisma.contact.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
+      const { page = 1, limit = 10, search } = req.query;
+
+      const { skip, take } = pagination.getPaginationParams(req.query, {
+        defaultLimit: 10,
+        maxLimit: 200,
+      });
+
+      const where = {};
+      if (search) {
+        where.OR = [
+          {
+            name: {
+              contains: search,
+              mode: "insensitive",
             },
           },
-        },
-      });
+          {
+            email: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            message: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        ];
+      }
+
+      const [contacts, total] = await Promise.all([
+        prisma.contact.findMany({
+          where,
+          skip,
+          take,
+          orderBy: { createdAt: "desc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        }),
+        prisma.contact.count({ where }),
+      ]);
 
       const formattedContacts = contacts.map((contact) => ({
         ...contact,
@@ -195,14 +232,25 @@ class ContactController {
           : "Not a member",
       }));
 
+      const paginatedResponse = pagination.createPaginatedResponse(
+        formattedContacts,
+        req.query,
+        total,
+        {
+          defaultLimit: 10,
+          maxLimit: 200,
+        }
+      );
+
       return response.success(
         res,
-        { contacts: formattedContacts },
+        paginatedResponse,
         "Contacts retrieved successfully"
       );
     } catch (error) {
       logger.error("Get All Contacts error", {
         error: error?.message || error,
+        query: req.query,
       });
       return response.error(
         res,

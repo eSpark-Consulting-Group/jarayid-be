@@ -29,7 +29,7 @@ class StaticPageController {
   }
 
   async createStaticPage(req, res) {
-    const { title, slug, content} = req.body;
+    const { title, slug, content } = req.body;
 
     try {
       const existingPage = await prisma.staticPage.findFirst({
@@ -70,6 +70,7 @@ class StaticPageController {
   async getAllStaticPages(req, res) {
     try {
       const { page = 1, limit = 10, search } = req.query;
+
       const { skip, take } = pagination.getPaginationParams(req.query, {
         defaultLimit: 10,
         maxLimit: 200,
@@ -78,12 +79,28 @@ class StaticPageController {
       const where = {};
       if (search) {
         where.OR = [
-          { title: { contains: search, mode: "insensitive" } },
-          { slug: { contains: search, mode: "insensitive" } },
+          {
+            title: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            slug: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            content: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
         ];
       }
 
-      const [pages, total] = await Promise.all([
+      const [staticPages, total] = await Promise.all([
         prisma.staticPage.findMany({
           where,
           skip,
@@ -94,28 +111,28 @@ class StaticPageController {
       ]);
 
       const paginatedResponse = pagination.createPaginatedResponse(
-        pages,
+        staticPages,
+        req.query,
         total,
-        page,
-        limit,
         {
-          totalPages: Math.ceil(total / limit),
-          currentPage: Number(page),
+          defaultLimit: 10,
+          maxLimit: 200,
         }
       );
 
       return response.success(
         res,
         paginatedResponse,
-        "Static Pages retrieved successfully"
+        "Static pages retrieved successfully"
       );
     } catch (error) {
-      logger.error("Get All Static Pages error:", {
+      logger.error("Get All Static Pages error", {
         error: error?.message || error,
+        query: req.query,
       });
       return response.error(
         res,
-        "Failed to retrieve Static Pages",
+        "Failed to retrieve static pages",
         500,
         error.message
       );
@@ -210,7 +227,7 @@ class StaticPageController {
 
       const updatedPage = await prisma.staticPage.update({
         where: { id },
-        data: { title, slug, content},
+        data: { title, slug, content },
       });
 
       return response.success(

@@ -9,10 +9,6 @@ import optionalAuth from "../middleware/optionalAuth.js";
 const router = Router();
 const contactController = new ContactController();
 const validation = createValidationMiddleware(schemas);
-const logHeaders = (req, res, next) => {
-  console.log("Headers:", req.headers);
-  next();
-};
 /**
  * @swagger
  * /contact-us:
@@ -41,7 +37,6 @@ const logHeaders = (req, res, next) => {
  */
 router.post(
   "/",
-  logHeaders,
   optionalAuth,
   validation.contactUs.create,
   contactController.submitContactForm
@@ -55,6 +50,19 @@ router.post(
  *     tags: [Contact Us]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Current page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of items per page
  *     responses:
  *       200:
  *         description: Contacts retrieved successfully
@@ -72,17 +80,63 @@ router.post(
  *                 data:
  *                   type: object
  *                   properties:
- *                     contacts:
+ *                     items:
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/ContactUsResponse'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 50
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 5
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPrevPage:
+ *                           type: boolean
+ *                           example: false
+ *                         nextPage:
+ *                           type: integer
+ *                           example: 2
+ *                         prevPage:
+ *                           type: integer
+ *                           nullable: true
+ *                           example: null
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         itemCount:
+ *                           type: integer
+ *                           example: 10
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 50
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 10
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Access denied - Admin role required
  *       500:
  *         description: Internal server error
+ *       404:
+ *         description: Contacts not found
  */
+
 router.get("/", auth, adminAuth, contactController.getAllContacts);
 
 /**

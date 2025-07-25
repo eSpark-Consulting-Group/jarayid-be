@@ -85,18 +85,6 @@ router.post(
  *           type: string
  *         description: Search term for title or slug
  *       - in: query
- *         name: sort_by
- *         schema:
- *           type: string
- *           enum: [title, created_at]
- *         description: Field to sort by
- *       - in: query
- *         name: sort_order
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *         description: Sort order
- *       - in: query
  *         name: page
  *         schema:
  *           type: integer
@@ -110,33 +98,74 @@ router.post(
  *         description: Number of items per page
  *     responses:
  *       200:
- *         description: List of static pages
+ *         description: Static pages retrieved successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
- *                   example: success
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
  *                   example: Static pages fetched successfully
  *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/StaticPage'
- *                 pagination:
  *                   type: object
  *                   properties:
- *                     total_pages:
- *                       type: integer
- *                     current_page:
- *                       type: integer
- *                     total_records:
- *                       type: integer
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/StaticPage'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 25
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 3
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPrevPage:
+ *                           type: boolean
+ *                           example: false
+ *                         nextPage:
+ *                           type: integer
+ *                           example: 2
+ *                         prevPage:
+ *                           type: integer
+ *                           nullable: true
+ *                           example: null
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         itemCount:
+ *                           type: integer
+ *                           example: 10
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 25
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 10
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ *       404:
+ *         description: Static page not found
  */
 
 
