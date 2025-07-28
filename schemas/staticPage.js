@@ -26,7 +26,10 @@ const staticPageSchema = {
       .messages(messages)
       .required(),
 
-    content: Joi.string().label("content").messages(messages).required(),
+    content: Joi.json()
+      .label("content")
+      .messages(messages)
+      .required(),
   }),
 
   update: Joi.object({
@@ -39,7 +42,9 @@ const staticPageSchema = {
       .label("slug")
       .messages(messages),
 
-    content: Joi.string().label("content").messages(messages),
+    content: Joi.json()
+      .label("content")
+      .messages(messages),
   }),
 
   params: Joi.object({

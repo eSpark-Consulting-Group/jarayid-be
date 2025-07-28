@@ -35,8 +35,8 @@ const validation = createValidationMiddleware(schemas);
  *                 type: string
  *                 example: about-us
  *               content:
- *                 type: string
- *                 example: Welcome to our company...
+ *                 type: json
+ *                 example: {"welcomeMessage": "Welcome to our company..."}
  *     responses:
  *       201:
  *         description: Static Page created successfully
@@ -249,8 +249,8 @@ router.get(
  *                 type: string
  *                 example: updated-about-us
  *               content:
- *                 type: string
- *                 example: Updated content goes here
+ *                 type: json
+ *                 example: {"welcomeMessage": "Updated content goes here"}
  *     responses:
  *       200:
  *         description: Static page updated successfully
