@@ -72,7 +72,6 @@ const commentSchema = {
     articleParams: Joi.object({
         articleId: Joi.string()
             .uuid()
-            .required()
             .messages(messages)
     }),
 

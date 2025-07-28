@@ -36,6 +36,7 @@ class ArticleController {
             summaryEnglish, 
             categoryId, 
             subType,
+            rssFeedId,
             pinned = false,
             publishedAt 
         } = req.body;
@@ -82,6 +83,7 @@ class ArticleController {
                 summaryEnglish,
                 categoryId,
                 subType,
+                rssFeedId,
                 pinned,
                 publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
                 userId: req.user.id // Admin who created the article
@@ -120,6 +122,14 @@ class ArticleController {
                             email: true
                         }
                     },
+                    rssFeed: {
+                        select: {
+                            id: true,
+                            name: true,
+                            logo: true,
+                            url: true
+                        }
+                    },
                     _count: {
                         select: {
                             comments: true,
@@ -138,7 +148,24 @@ class ArticleController {
 
     async getAllArticles(req, res) {
         try {
-            const { page = 1, limit = 10, categoryId, subType, pinned, search, status, trackViews = false } = req.query;
+            const { 
+                page = 1, 
+                limit = 10, 
+                categoryId, 
+                subType, 
+                pinned, 
+                search, 
+                status, 
+                trackViews = false,
+                // New sorting and filtering options
+                sortBy = 'publishedAt',
+                sortOrder = 'desc',
+                dateFrom,
+                dateTo,
+                createdFrom,
+                createdTo
+            } = req.query;
+            
             const { skip, take } = pagination.getPaginationParams(req.query, { 
                 defaultLimit: 10, 
                 maxLimit: 200 // Increased max limit to allow for 50+ items per page
@@ -146,10 +173,12 @@ class ArticleController {
 
             const where = {};
             
+            // Existing filters
             if (categoryId) where.categoryId = categoryId;
             if (subType) where.subType = subType;
             if (pinned !== undefined) where.pinned = pinned === 'true';
             
+            // Search filter
             if (search) {
                 where.OR = [
                     { title: { contains: search, mode: 'insensitive' } },
@@ -159,6 +188,66 @@ class ArticleController {
                     { url: { contains: search, mode: 'insensitive' } }
                 ];
             }
+
+            // Date range filters for publishedAt
+            if (dateFrom || dateTo) {
+                where.publishedAt = {};
+                if (dateFrom) {
+                    where.publishedAt.gte = new Date(dateFrom);
+                }
+                if (dateTo) {
+                    // Add one day to include the entire "to" date
+                    const toDate = new Date(dateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    where.publishedAt.lte = toDate;
+                }
+            }
+
+            // Date range filters for createdAt
+            if (createdFrom || createdTo) {
+                where.createdAt = {};
+                if (createdFrom) {
+                    where.createdAt.gte = new Date(createdFrom);
+                }
+                if (createdTo) {
+                    // Add one day to include the entire "to" date
+                    const toDate = new Date(createdTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    where.createdAt.lte = toDate;
+                }
+            }
+
+            // Dynamic sorting configuration
+            const buildOrderBy = () => {
+                const validSortFields = [
+                    'title', 
+                    'publishedAt', 
+                    'createdAt', 
+                    'viewCount', 
+                    'source',
+                    'pinned'
+                ];
+                const validSortOrders = ['asc', 'desc'];
+
+                // Validate sortBy and sortOrder
+                const field = validSortFields.includes(sortBy) ? sortBy : 'publishedAt';
+                const order = validSortOrders.includes(sortOrder.toLowerCase()) ? sortOrder.toLowerCase() : 'desc';
+
+                // Always prioritize pinned articles first, then apply user sorting
+                if (field === 'pinned') {
+                    return [
+                        { pinned: order },
+                        { publishedAt: 'desc' }, // Secondary sort by publishedAt
+                        { createdAt: 'desc' }    // Tertiary sort by createdAt
+                    ];
+                } else {
+                    return [
+                        { pinned: 'desc' },      // Always show pinned first
+                        { [field]: order },      // Then user's preferred sorting
+                        { createdAt: 'desc' }    // Final fallback
+                    ];
+                }
+            };
 
             const [articles, total] = await Promise.all([
                 prisma.article.findMany({
@@ -180,6 +269,14 @@ class ArticleController {
                                 email: true
                             }
                         },
+                        rssFeed: {
+                            select: {
+                                id: true,
+                                name: true,
+                                logo: true,
+                                url: true
+                            }
+                        },
                         _count: {
                             select: {
                                 comments: { where: { isDeleted: false } },
@@ -199,11 +296,7 @@ class ArticleController {
                             }
                         })
                     },
-                    orderBy: [
-                        { pinned: 'desc' },
-                        { publishedAt: 'desc' },
-                        { createdAt: 'desc' }
-                    ]
+                    orderBy: buildOrderBy()
                 }),
                 prisma.article.count({ where })
             ]);
@@ -311,6 +404,14 @@ class ArticleController {
                             id: true,
                             name: true,
                             email: true
+                        }
+                    },
+                    rssFeed: {
+                        select: {
+                            id: true,
+                            name: true,
+                            logo: true,
+                            url: true
                         }
                     },
                     comments: {
@@ -713,16 +814,21 @@ class ArticleController {
             const articles = result.articles || result;
             const totalCount = result.totalCount || articles.length;
 
+            // Add share links to all trending articles
+            const articlesWithShareLinks = articles.map(article => 
+                shareLink.addShareLinksToArticle(article)
+            );
+
             // Create pagination response
             const paginationInfo = pagination.createPaginationResponse(page, limit, totalCount);
 
             return response.success(res, {
-                articles,
+                articles: articlesWithShareLinks,
                 period,
                 pagination: paginationInfo,
                 meta: {
                     totalArticles: totalCount,
-                    pageArticles: articles.length,
+                    pageArticles: articlesWithShareLinks.length,
                     timePeriod: period
                 }
             }, 'Trending articles retrieved successfully');
@@ -1018,6 +1124,14 @@ class ArticleController {
                                         email: true
                                     }
                                 },
+                                rssFeed: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        logo: true,
+                                        url: true
+                                    }
+                                },
                                 _count: {
                                     select: {
                                         comments: { where: { isDeleted: false } },
@@ -1094,6 +1208,14 @@ class ArticleController {
                                         id: true,
                                         name: true,
                                         email: true
+                                    }
+                                },
+                                rssFeed: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        logo: true,
+                                        url: true
                                     }
                                 },
                                 _count: {
@@ -1180,6 +1302,14 @@ class ArticleController {
                             id: true,
                             name: true,
                             email: true
+                        }
+                    },
+                    rssFeed: {
+                        select: {
+                            id: true,
+                            name: true,
+                            logo: true,
+                            url: true
                         }
                     },
                     _count: {

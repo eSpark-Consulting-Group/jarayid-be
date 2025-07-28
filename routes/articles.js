@@ -54,7 +54,7 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  * @swagger
  * /articles:
  *   get:
- *     summary: Get all articles with pagination and filtering
+ *     summary: Get all articles with pagination, filtering, and sorting
  *     tags: [Articles]
  *     parameters:
  *       - in: query
@@ -69,7 +69,7 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 100
+ *           maximum: 200
  *           default: 10
  *         description: Number of articles per page
  *       - in: query
@@ -102,6 +102,48 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  *           type: boolean
  *           default: false
  *         description: Enable view tracking for articles in the list (optional)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [title, publishedAt, createdAt, viewCount, source, pinned]
+ *           default: publishedAt
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order (ascending or descending)
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter articles published from this date (ISO 8601 format)
+ *         example: "2024-01-01"
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter articles published until this date (ISO 8601 format)
+ *         example: "2024-12-31"
+ *       - in: query
+ *         name: createdFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter articles created from this date (ISO 8601 format)
+ *         example: "2024-01-01"
+ *       - in: query
+ *         name: createdTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter articles created until this date (ISO 8601 format)
+ *         example: "2024-12-31"
  *     responses:
  *       200:
  *         description: Articles retrieved successfully

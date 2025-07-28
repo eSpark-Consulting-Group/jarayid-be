@@ -57,6 +57,10 @@ const articleSchema = {
             .valid('SPORTS', 'ECONOMICS', 'POLITICS')
             .messages(messages)
             .optional(),
+        rssFeedId: Joi.string()
+            .uuid()
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .default(false)
             .messages(messages)
@@ -113,6 +117,10 @@ const articleSchema = {
             .valid('SPORTS', 'ECONOMICS', 'POLITICS')
             .messages(messages)
             .optional(),
+        rssFeedId: Joi.string()
+            .uuid()
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .messages(messages)
             .optional(),
@@ -138,7 +146,7 @@ const articleSchema = {
         limit: Joi.number()
             .integer()
             .min(1)
-            .max(100)
+            .max(200)
             .default(10)
             .messages(messages),
         categoryId: Joi.string()
@@ -159,7 +167,38 @@ const articleSchema = {
             .messages(messages),
         trackViews: Joi.boolean()
             .default(false)
+            .messages(messages),
+        // New sorting parameters
+        sortBy: Joi.string()
+            .valid('title', 'publishedAt', 'createdAt', 'viewCount', 'source', 'pinned')
+            .default('publishedAt')
             .messages(messages)
+            .optional(),
+        sortOrder: Joi.string()
+            .valid('asc', 'desc')
+            .default('desc')
+            .messages(messages)
+            .optional(),
+        // Date range filters for publishedAt
+        dateFrom: Joi.date()
+            .iso()
+            .messages(messages)
+            .optional(),
+        dateTo: Joi.date()
+            .iso()
+            .min(Joi.ref('dateFrom'))
+            .messages({...messages, 'date.min': 'dateTo must be greater than or equal to dateFrom'})
+            .optional(),
+        // Date range filters for createdAt
+        createdFrom: Joi.date()
+            .iso()
+            .messages(messages)
+            .optional(),
+        createdTo: Joi.date()
+            .iso()
+            .min(Joi.ref('createdFrom'))
+            .messages({...messages, 'date.min': 'createdTo must be greater than or equal to createdFrom'})
+            .optional()
     })
 };
 

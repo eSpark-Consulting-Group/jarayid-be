@@ -87,6 +87,7 @@ model Article {
   imageKey        String?          @db.VarChar(500)
   categoryId      String?
   subType         CategorySubType?
+  status          Boolean           @default(true)
   pinned          Boolean          @default(false)
   viewCount       Int              @default(0)
   publishedAt     DateTime?

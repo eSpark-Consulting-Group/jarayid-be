@@ -783,4 +783,228 @@ router.post('/queue/pause', auth, adminAuth, rssFeedController.pauseQueue);
  */
 router.post('/queue/resume', auth, adminAuth, rssFeedController.resumeQueue);
 
+/**
+ * @swagger
+ * /rss-feeds/feeds/status:
+ *   get:
+ *     summary: Get comprehensive RSS feeds status with accurate article counts
+ *     description: Returns RSS feeds with their article counts based on direct database relationships for maximum accuracy
+ *     tags: [RSS Feeds]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of feeds per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           minLength: 1
+ *           maxLength: 100
+ *         description: Search by feed name or URL
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, PUBLISH, ARCHIVE]
+ *         description: Filter by feed status
+ *       - in: query
+ *         name: categoryId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by category ID
+ *       - in: query
+ *         name: subType
+ *         schema:
+ *           type: string
+ *           enum: [SPORTS, ECONOMICS, POLITICS]
+ *         description: Filter by subcategory type
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter feeds created from this date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter feeds created up to this date
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, status, createdAt, updatedAt]
+ *           default: createdAt
+ *         description: Sort by field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *     responses:
+ *       200:
+ *         description: RSS feeds status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     feeds:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                           url:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [DRAFT, PUBLISH, ARCHIVE]
+ *                           categoryId:
+ *                             type: string
+ *                             format: uuid
+ *                           subType:
+ *                             type: string
+ *                             enum: [SPORTS, ECONOMICS, POLITICS]
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                           category:
+ *                             type: object
+ *                             properties:
+ *                               name:
+ *                                 type: string
+ *                               slug:
+ *                                 type: string
+ *                           articleStats:
+ *                             type: object
+ *                             properties:
+ *                               total:
+ *                                 type: integer
+ *                               today:
+ *                                 type: integer
+ *                               thisWeek:
+ *                                 type: integer
+ *                               thisMonth:
+ *                                 type: integer
+ *                           processingStatus:
+ *                             type: object
+ *                             properties:
+ *                               isProcessing:
+ *                                 type: boolean
+ *                               lastProcessed:
+ *                                 type: string
+ *                                 format: date-time
+ *                           healthScore:
+ *                             type: integer
+ *                             minimum: 0
+ *                             maximum: 100
+ *                           healthStatus:
+ *                             type: string
+ *                             enum: [excellent, good, fair, poor]
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *                         hasNext:
+ *                           type: boolean
+ *                         hasPrev:
+ *                           type: boolean
+ *                     statistics:
+ *                       type: object
+ *                       properties:
+ *                         totalFeeds:
+ *                           type: integer
+ *                         totalArticles:
+ *                           type: integer
+ *                         articlesToday:
+ *                           type: integer
+ *                         articlesThisWeek:
+ *                           type: integer
+ *                         articlesThisMonth:
+ *                           type: integer
+ *                         activeFeeds:
+ *                           type: integer
+ *                         processingFeeds:
+ *                           type: integer
+ *                         healthDistribution:
+ *                           type: object
+ *                           properties:
+ *                             excellent:
+ *                               type: integer
+ *                             good:
+ *                               type: integer
+ *                             fair:
+ *                               type: integer
+ *                             poor:
+ *                               type: integer
+ *                         avgHealthScore:
+ *                           type: number
+ *                     filters:
+ *                       type: object
+ *                       properties:
+ *                         search:
+ *                           type: string
+ *                         status:
+ *                           type: string
+ *                         categoryId:
+ *                           type: string
+ *                         subType:
+ *                           type: string
+ *                         dateFrom:
+ *                           type: string
+ *                         dateTo:
+ *                           type: string
+ *                         sortBy:
+ *                           type: string
+ *                         sortOrder:
+ *                           type: string
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid query parameters
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/feeds/status', auth, validation.rssFeed.statusQuery, rssFeedController.getFeedsStatus);
+
 export default router;

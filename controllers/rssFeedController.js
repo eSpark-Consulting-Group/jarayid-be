@@ -543,6 +543,141 @@ class RSSFeedController {
         }
     }
 
+    async getFeedsStatus(req, res) {
+        try {
+            const {
+                page = 1,
+                limit = 10,
+                search,
+                status,
+                categoryId,
+                subType,
+                dateFrom,
+                dateTo,
+                sortBy = 'createdAt',
+                sortOrder = 'desc'
+            } = req.query;
+
+            const { skip, take } = pagination.getPaginationParams(req.query, {
+                defaultLimit: 10,
+                maxLimit: 100
+            });
+
+            // Build where clause for feeds
+            const where = {};
+            
+            if (search) {
+                where.OR = [
+                    { name: { contains: search, mode: 'insensitive' } },
+                    { url: { contains: search, mode: 'insensitive' } }
+                ];
+            }
+            
+            if (status) where.status = status;
+            if (categoryId) where.categoryId = categoryId;
+            if (subType) where.subType = subType;
+
+            // Date range filters
+            if (dateFrom || dateTo) {
+                where.createdAt = {};
+                if (dateFrom) {
+                    where.createdAt.gte = new Date(dateFrom);
+                }
+                if (dateTo) {
+                    const toDate = new Date(dateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    where.createdAt.lte = toDate;
+                }
+            }
+
+            // Dynamic sorting
+            const buildOrderBy = () => {
+                const validSortFields = ['name', 'status', 'createdAt', 'updatedAt'];
+                const validSortOrders = ['asc', 'desc'];
+
+                const field = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+                const order = validSortOrders.includes(sortOrder.toLowerCase()) ? sortOrder.toLowerCase() : 'desc';
+
+                return { [field]: order };
+            };
+
+            // Get feeds with their article counts and status
+            const [feeds, total] = await Promise.all([
+                prisma.rSSFeed.findMany({
+                    where,
+                    skip,
+                    take,
+                    include: {
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                type: true
+                            }
+                        }
+                    },
+                    orderBy: buildOrderBy()
+                }),
+                prisma.rSSFeed.count({ where })
+            ]);
+
+            // Get article counts for each feed
+            const feedsWithStats = await Promise.all(
+                feeds.map(async (feed) => {
+                    // Get total articles that are directly linked to this RSS feed
+                    const articleWhere = {
+                        rssFeedId: feed.id // Direct relationship lookup
+                    };
+
+                    // Get only total article count
+                    const totalArticles = await prisma.article.count({ where: articleWhere });
+
+                    return {
+                        ...feed,
+                        totalArticles
+                    };
+                })
+            );
+
+            // Calculate overall statistics
+            const overallStats = {
+                totalFeeds: total,
+                activeFeeds: feedsWithStats.filter(f => f.status === 'PUBLISH').length,
+                totalArticlesFromFeeds: feedsWithStats.reduce((sum, f) => sum + f.totalArticles, 0)
+            };
+
+            // Create paginated response
+            const paginatedResponse = pagination.createPaginatedResponse(
+                feedsWithStats,
+                req.query,
+                total,
+                { defaultLimit: 10, maxLimit: 100 }
+            );
+
+            // Add metadata
+            paginatedResponse.meta = {
+                ...paginatedResponse.meta,
+                overallStats,
+                filters: {
+                    search: search || null,
+                    status: status || null,
+                    categoryId: categoryId || null,
+                    subType: subType || null,
+                    dateFrom: dateFrom || null,
+                    dateTo: dateTo || null,
+                    sortBy,
+                    sortOrder
+                }
+            };
+
+            return response.success(res, paginatedResponse, 'RSS feeds status retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get Feeds Status error:', { error: error?.message || error });
+            return response.error(res, 'Failed to retrieve feeds status', 500, error.message);
+        }
+    }
+
     async getJobStatus(req, res) {
         const { jobId } = req.params;
 
