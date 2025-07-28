@@ -1,7 +1,5 @@
 import rssProcessor from '../services/rssProcessor.js';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../prisma/index.js';  // Use shared instance
 
 /**
  * Test script for RSS processing functionality

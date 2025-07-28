@@ -391,14 +391,8 @@ class AISummaryService {
      * @returns {Promise<Object>} Statistics
      */
     async getProcessingStats() {
-        const [
-            totalArticles,
-            missingEnglish,
-            missingArabic,
-            missingBoth,
-            withUrl,
-            scrapableUrls
-        ] = await Promise.all([
+        // Execute queries in smaller batches to reduce connection pressure
+        const [totalArticles, missingEnglish, missingArabic] = await Promise.all([
             prisma.article.count(),
             prisma.article.count({
                 where: {
@@ -415,41 +409,45 @@ class AISummaryService {
                         { summaryArabic: '' }
                     ]
                 }
-            }),
-            prisma.article.count({
-                where: {
-                    OR: [
-                        {
-                            AND: [
-                                { summaryEnglish: null },
-                                { summaryArabic: null }
-                            ]
-                        },
-                        {
-                            AND: [
-                                { summaryEnglish: '' },
-                                { summaryArabic: '' }
-                            ]
-                        }
-                    ]
-                }
-            }),
-            prisma.article.count({
-                where: {
-                    url: {
-                        not: null
-                    }
-                }
-            }),
-            prisma.article.count({
-                where: {
-                    AND: [
-                        { url: { not: null } },
-                        { url: { not: '' } }
-                    ]
-                }
             })
         ]);
+
+        // Execute remaining queries sequentially to reduce parallel connections
+        const missingBoth = await prisma.article.count({
+            where: {
+                OR: [
+                    {
+                        AND: [
+                            { summaryEnglish: null },
+                            { summaryArabic: null }
+                        ]
+                    },
+                    {
+                        AND: [
+                            { summaryEnglish: '' },
+                            { summaryArabic: '' }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        const withUrl = await prisma.article.count({
+            where: {
+                url: {
+                    not: null
+                }
+            }
+        });
+
+        const scrapableUrls = await prisma.article.count({
+            where: {
+                AND: [
+                    { url: { not: null } },
+                    { url: { not: '' } }
+                ]
+            }
+        });
 
         return {
             totalArticles,
