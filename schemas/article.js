@@ -61,6 +61,10 @@ const articleSchema = {
             .uuid()
             .messages(messages)
             .optional(),
+        status: Joi.boolean()
+            .default(true)
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .default(false)
             .messages(messages)
@@ -121,6 +125,9 @@ const articleSchema = {
             .uuid()
             .messages(messages)
             .optional(),
+        status: Joi.boolean()
+            .messages(messages)
+            .optional(),
         pinned: Joi.boolean()
             .messages(messages)
             .optional(),
@@ -134,6 +141,21 @@ const articleSchema = {
         id: Joi.string()
             .uuid()
             .messages(messages)
+            .required()
+    }),
+
+    bulkDelete: Joi.object({
+        articleIds: Joi.array()
+            .items(Joi.string().uuid().messages(messages))
+            .min(1)
+            .max(100)
+            .unique()
+            .messages({
+                ...messages,
+                'array.min': 'At least one article ID is required',
+                'array.max': 'Cannot delete more than 100 articles at once',
+                'array.unique': 'Duplicate article IDs are not allowed'
+            })
             .required()
     }),
 
@@ -162,8 +184,11 @@ const articleSchema = {
             .min(1)
             .max(100)
             .messages(messages),
-        status: Joi.string()
-            .valid('published', 'draft')
+        status: Joi.alternatives()
+            .try(
+                Joi.boolean(),
+                Joi.string().valid('true', 'false')
+            )
             .messages(messages),
         trackViews: Joi.boolean()
             .default(false)

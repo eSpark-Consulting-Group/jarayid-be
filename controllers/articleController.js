@@ -37,6 +37,7 @@ class ArticleController {
             categoryId, 
             subType,
             rssFeedId,
+            status = true,
             pinned = false,
             publishedAt 
         } = req.body;
@@ -84,6 +85,7 @@ class ArticleController {
                 categoryId,
                 subType,
                 rssFeedId,
+                status,
                 pinned,
                 publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
                 userId: req.user.id // Admin who created the article
@@ -177,6 +179,15 @@ class ArticleController {
             if (categoryId) where.categoryId = categoryId;
             if (subType) where.subType = subType;
             if (pinned !== undefined) where.pinned = pinned === 'true';
+            
+            // Status filter - support both boolean and string values
+            if (status !== undefined) {
+                if (status === 'true' || status === true) {
+                    where.status = true;
+                } else if (status === 'false' || status === false) {
+                    where.status = false;
+                }
+            }
             
             // Search filter
             if (search) {
@@ -505,6 +516,7 @@ class ArticleController {
             summaryEnglish, 
             categoryId, 
             subType,
+            status,
             pinned,
             publishedAt 
         } = req.body;
@@ -564,6 +576,7 @@ class ArticleController {
             if (summaryEnglish !== undefined) data.summaryEnglish = summaryEnglish;
             if (categoryId !== undefined) data.categoryId = categoryId;
             if (subType !== undefined) data.subType = subType;
+            if (status !== undefined) data.status = status;
             if (pinned !== undefined) data.pinned = pinned;
             if (publishedAt !== undefined) data.publishedAt = new Date(publishedAt);
 
@@ -662,6 +675,98 @@ class ArticleController {
                 return response.notFound(res, 'Article not found');
             }
             return response.error(res, 'Article deletion failed', 500, error.message);
+        }
+    }
+
+    async deleteMultipleArticles(req, res) {
+        const { articleIds } = req.body;
+
+        try {
+            // Validate that articleIds is an array and not empty
+            if (!Array.isArray(articleIds) || articleIds.length === 0) {
+                return response.error(res, 'Article IDs must be a non-empty array', 400);
+            }
+
+            // Validate maximum number of articles to delete at once (safety limit)
+            if (articleIds.length > 100) {
+                return response.error(res, 'Cannot delete more than 100 articles at once', 400);
+            }
+
+            // Get all articles that exist with their image keys
+            const existingArticles = await prisma.article.findMany({
+                where: { 
+                    id: { in: articleIds } 
+                },
+                select: {
+                    id: true,
+                    imageKey: true,
+                    title: true
+                }
+            });
+
+            if (existingArticles.length === 0) {
+                return response.notFound(res, 'No articles found with the provided IDs');
+            }
+
+            // Log which articles will be deleted
+            logger.info(`Bulk delete requested for ${articleIds.length} articles, ${existingArticles.length} found`, {
+                requestedIds: articleIds.length,
+                foundIds: existingArticles.length,
+                userId: req.user.id
+            });
+
+            // Delete images from Cloudinary for articles that have them
+            const imageDeletePromises = existingArticles
+                .filter(article => article.imageKey)
+                .map(async (article) => {
+                    try {
+                        await cloudinaryService.deleteFile(article.imageKey);
+                        logger.info(`Deleted image for article: ${article.title}`, { articleId: article.id });
+                    } catch (deleteError) {
+                        logger.error(`Failed to delete image for article: ${article.title}`, { 
+                            error: deleteError?.message || deleteError,
+                            articleId: article.id
+                        });
+                    }
+                });
+
+            // Execute all image deletions in parallel (non-blocking for database operation)
+            await Promise.allSettled(imageDeletePromises);
+
+            // Delete articles from database
+            const deleteResult = await prisma.article.deleteMany({
+                where: { 
+                    id: { in: existingArticles.map(article => article.id) } 
+                }
+            });
+
+            const deletedCount = deleteResult.count;
+            const notFoundIds = articleIds.filter(id => 
+                !existingArticles.some(article => article.id === id)
+            );
+
+            logger.info(`Bulk delete completed: ${deletedCount} articles deleted`, {
+                deletedCount,
+                notFoundCount: notFoundIds.length,
+                userId: req.user.id
+            });
+
+            return response.success(res, {
+                deletedCount,
+                notFoundIds,
+                deletedArticles: existingArticles.map(article => ({
+                    id: article.id,
+                    title: article.title
+                }))
+            }, `Successfully deleted ${deletedCount} article(s)`);
+
+        } catch (error) {
+            logger.error('Bulk Delete Articles error:', { 
+                error: error?.message || error,
+                userId: req.user?.id,
+                articleIds: req.body.articleIds 
+            });
+            return response.error(res, 'Bulk article deletion failed', 500, error.message);
         }
     }
 

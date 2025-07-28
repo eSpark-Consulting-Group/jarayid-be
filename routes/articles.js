@@ -97,6 +97,11 @@ router.post('/', auth, adminAuth, singleUpload('image'), validation.article.crea
  *           maxLength: 100
  *         description: Search in title, source, and summaries
  *       - in: query
+ *         name: status
+ *         schema:
+ *           type: boolean
+ *         description: Filter by article status (true for active, false for inactive)
+ *       - in: query
  *         name: trackViews
  *         schema:
  *           type: boolean
@@ -417,6 +422,84 @@ router.put('/:id', auth, adminAuth, singleUpload('image'), validation.article.pa
  *         description: Internal server error
  */
 router.delete('/:id', auth, adminAuth, validation.article.params, articleController.deleteArticle);
+
+/**
+ * @swagger
+ * /articles/bulk-delete:
+ *   delete:
+ *     summary: Delete multiple articles in bulk (Admin only)
+ *     tags: [Articles]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               articleIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 maxItems: 100
+ *                 uniqueItems: true
+ *                 description: Array of article IDs to delete
+ *                 example: ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"]
+ *             required:
+ *               - articleIds
+ *     responses:
+ *       200:
+ *         description: Articles deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully deleted 5 article(s)"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedCount:
+ *                       type: integer
+ *                       example: 5
+ *                       description: Number of articles successfully deleted
+ *                     notFoundIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                       description: Array of article IDs that were not found
+ *                     deletedArticles:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           title:
+ *                             type: string
+ *                       description: Information about deleted articles
+ *       400:
+ *         description: Bad request (invalid article IDs array)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: No articles found with provided IDs
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/bulk-delete', auth, adminAuth, validation.article.bulkDelete, articleController.deleteMultipleArticles);
 
 /**
  * @swagger

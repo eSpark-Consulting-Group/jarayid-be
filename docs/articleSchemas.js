@@ -62,6 +62,10 @@
  *               type: string
  *               enum: [COUNTRY, NORMAL, MEDIA]
  *           description: Category information
+ *         status:
+ *           type: boolean
+ *           default: true
+ *           description: Whether the article is active/published
  *         pinned:
  *           type: boolean
  *           default: false
@@ -156,6 +160,10 @@
  *           type: string
  *           enum: [SPORTS, ECONOMICS, POLITICS]
  *           description: Article sub-type for categorization
+ *         status:
+ *           type: boolean
+ *           default: true
+ *           description: Whether the article is active/published
  *         pinned:
  *           type: boolean
  *           default: false
@@ -177,6 +185,7 @@
  *         summaryEnglish: "Article summary in English"
  *         categoryId: "550e8400-e29b-41d4-a716-446655440000"
  *         subType: "ECONOMICS"
+ *         status: true
  *         pinned: false
  *         publishedAt: "2025-01-10T12:00:00Z"
  *     
@@ -224,6 +233,9 @@
  *           type: string
  *           enum: [SPORTS, ECONOMICS, POLITICS]
  *           description: Article sub-type for categorization
+ *         status:
+ *           type: boolean
+ *           description: Whether the article is active/published
  *         pinned:
  *           type: boolean
  *           description: Whether the article should be pinned
@@ -235,6 +247,7 @@
  *         title: "Updated: Technology Breakthrough Details"
  *         summaryEnglish: "Updated summary with more details"
  *         subType: "SPORTS"
+ *         status: false
  *         pinned: true
  *     
  *     PaginatedArticles:
