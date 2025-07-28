@@ -70,6 +70,7 @@ model RSSFeed {
   subType    CategorySubType?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+  articles   Article[]
   category   Category         @relation(fields: [categoryId], references: [id])
 
   @@map("rss_feeds")
@@ -87,6 +88,7 @@ model Article {
   imageKey        String?          @db.VarChar(500)
   categoryId      String?
   subType         CategorySubType?
+  rssFeedId       String?
   status          Boolean           @default(true)
   pinned          Boolean          @default(false)
   viewCount       Int              @default(0)
@@ -95,6 +97,7 @@ model Article {
   userId          String
   articleViews    ArticleView[]
   category        Category?        @relation(fields: [categoryId], references: [id])
+  rssFeed         RSSFeed?         @relation(fields: [rssFeedId], references: [id])
   author          User             @relation(fields: [userId], references: [id])
   comments        Comment[]
   favorites       Favorite[]
