@@ -399,7 +399,7 @@ class RSSFeedController {
 
     async getRSSProcessingStats(req, res) {
         try {
-            // Get RSS processing statistics
+            // Get RSS processing statistics with improved accuracy using direct relationships
             const [
                 totalRSSFeeds,
                 publishedRSSFeeds,
@@ -410,29 +410,61 @@ class RSSFeedController {
                 prisma.rSSFeed.count(),
                 prisma.rSSFeed.count({ where: { status: 'PUBLISH' } }),
                 prisma.article.count(),
+                // Use direct rssFeedId relationship for more accurate count
                 prisma.article.count({
                     where: {
-                        url: { not: null } // Articles with URLs are likely from RSS
+                        rssFeedId: { not: null }
                     }
                 }),
+                // Recent RSS articles (last 24 hours) using direct relationship
                 prisma.article.count({
                     where: {
                         AND: [
-                            { url: { not: null } },
-                            { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } // Last 24 hours
+                            { rssFeedId: { not: null } },
+                            { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }
                         ]
                     }
                 })
             ]);
 
+            const inactiveRSSFeeds = totalRSSFeeds - publishedRSSFeeds;
+            const manualArticles = totalArticles - rssFeedArticles;
+
+            // Calculate percentages
+            const publishedRSSFeedsPercentage = totalRSSFeeds > 0 ? 
+                Math.round((publishedRSSFeeds / totalRSSFeeds) * 100) : 0;
+            
+            const inactiveRSSFeedsPercentage = totalRSSFeeds > 0 ? 
+                Math.round((inactiveRSSFeeds / totalRSSFeeds) * 100) : 0;
+            
+            const rssFeedArticlesPercentage = totalArticles > 0 ? 
+                Math.round((rssFeedArticles / totalArticles) * 100) : 0;
+            
+            const manualArticlesPercentage = totalArticles > 0 ? 
+                Math.round((manualArticles / totalArticles) * 100) : 0;
+            
+            const recentRSSArticlesPercentage = rssFeedArticles > 0 ? 
+                Math.round((recentArticles / rssFeedArticles) * 100) : 0;
+
             const stats = {
                 totalRSSFeeds,
                 publishedRSSFeeds,
-                inactiveRSSFeeds: totalRSSFeeds - publishedRSSFeeds,
+                publishedRSSFeedsPercentage,
+                inactiveRSSFeeds,
+                inactiveRSSFeedsPercentage,
                 totalArticles,
                 rssFeedArticles,
-                manualArticles: totalArticles - rssFeedArticles,
-                recentRSSArticles: recentArticles
+                rssFeedArticlesPercentage,
+                manualArticles,
+                manualArticlesPercentage,
+                recentRSSArticles: recentArticles,
+                recentRSSArticlesPercentage,
+                // Additional insights
+                insights: {
+                    rssAutomationRate: rssFeedArticlesPercentage,
+                    rssActivityRate: publishedRSSFeedsPercentage,
+                    recentActivityRate: recentRSSArticlesPercentage
+                }
             };
 
             return response.success(res, stats, 'RSS processing statistics retrieved successfully');
