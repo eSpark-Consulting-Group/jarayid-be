@@ -26,9 +26,20 @@ const staticPageSchema = {
       .messages(messages)
       .required(),
 
-    content: Joi.json()
+    content: Joi.alternatives()
+      .try(
+        Joi.object(),
+        Joi.string().custom((value, helpers) => {
+          try {
+            JSON.parse(value);
+            return value;
+          } catch (error) {
+            return helpers.error('content.invalid');
+          }
+        })
+      )
       .label("content")
-      .messages(messages)
+      .messages({...messages, 'content.invalid': 'Content must be valid JSON'})
       .required(),
   }),
 
@@ -42,9 +53,20 @@ const staticPageSchema = {
       .label("slug")
       .messages(messages),
 
-    content: Joi.json()
+    content: Joi.alternatives()
+      .try(
+        Joi.object(),
+        Joi.string().custom((value, helpers) => {
+          try {
+            JSON.parse(value);
+            return value;
+          } catch (error) {
+            return helpers.error('content.invalid');
+          }
+        })
+      )
       .label("content")
-      .messages(messages),
+      .messages({...messages, 'content.invalid': 'Content must be valid JSON'}),
   }),
 
   params: Joi.object({
