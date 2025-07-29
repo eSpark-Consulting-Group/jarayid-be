@@ -8,6 +8,7 @@ import AISummaryController from './aiSummaryController.js';
 import YouTubeContentController from './youtubeContentController.js';
 import StaticPageController from './staticPageController.js';
 import ContactController from './contactController.js';
+import SponsorAccountController from './sponsorAccountController.js';
 
 export { 
     UserController, 
@@ -18,6 +19,7 @@ export {
     AISummaryController,
     YouTubeContentController,
     StaticPageController,
-    ContactController
+    ContactController,
+    SponsorAccountController
 };
 export default UserController;
