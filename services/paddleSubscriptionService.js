@@ -1,6 +1,21 @@
-const { paddle } = require('../config/paddle');
-const prisma = require('../prisma');
-const logger = require('../utils/logger');
+import { paddle } from '../config/paddle.js';
+import prisma from '../prisma/index.js';
+import winston from 'winston';
+
+// Logger configuration
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return `${timestamp} [${level.toUpperCase()}] Paddle: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        })
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'combined.log' })
+    ]
+});
 
 class PaddleSubscriptionService {
     
@@ -600,4 +615,4 @@ class PaddleSubscriptionService {
     }
 }
 
-module.exports = new PaddleSubscriptionService();
+export default new PaddleSubscriptionService();

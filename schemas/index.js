@@ -6,7 +6,7 @@ import articleSchema from './article.js';
 import commentSchema from './comment.js';
 import youtubeContentSchema from './youtubeContent.js';
 import contactUsSchema from './contact.js';
-const { subscriptionSchemas } = require('./subscription.js');
+import { subscriptionSchemas } from './subscription.js';
 
 export default {
     category: categorySchema,

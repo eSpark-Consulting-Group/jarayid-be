@@ -1,6 +1,23 @@
-const prisma = require('../prisma');
-const { errorResponse } = require('../utils/response');
-const logger = require('../utils/logger');
+import prisma from '../prisma/index.js';
+import response from '../utils/response.js';
+import winston from 'winston';
+
+// Logger configuration
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return `${timestamp} [${level.toUpperCase()}] Premium: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        })
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'combined.log' })
+    ]
+});
+
+const { error: errorResponse } = response;
 
 /**
  * Middleware to check if user has premium access
@@ -131,7 +148,7 @@ const requireTrialOrPremium = async (req, res, next) => {
     }
 };
 
-module.exports = {
+export {
     requirePremium,
     checkPremiumStatus,
     requireTrialOrPremium

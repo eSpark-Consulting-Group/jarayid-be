@@ -1,9 +1,11 @@
-const express = require('express');
+import express from 'express';
+import SubscriptionController from '../controllers/subscriptionController.js';
+import { auth, validate } from '../middleware/index.js';
+import schemas from '../schemas/index.js';
+
 const router = express.Router();
-const subscriptionController = require('../controllers/subscriptionController');
-const auth = require('../middleware/auth');
-const validate = require('../middleware/validate');
-const { subscriptionSchemas } = require('../schemas');
+const subscriptionController = new SubscriptionController();
+const validation = validate(schemas);
 
 /**
  * @swagger
@@ -163,7 +165,7 @@ router.get('/plans', subscriptionController.getPlans);
  */
 router.post('/checkout', 
     auth, 
-    validate(subscriptionSchemas.createCheckout), 
+    validation.subscriptionSchemas.createCheckout, 
     subscriptionController.createCheckout
 );
 
@@ -213,7 +215,7 @@ router.post('/checkout',
  */
 router.post('/', 
     auth, 
-    validate(subscriptionSchemas.createSubscription), 
+    validation.subscriptionSchemas.createSubscription, 
     subscriptionController.createSubscription
 );
 
@@ -293,7 +295,7 @@ router.get('/me', auth, subscriptionController.getUserSubscription);
  */
 router.post('/:subscriptionId/cancel', 
     auth, 
-    validate(subscriptionSchemas.cancelSubscription), 
+    validation.subscriptionSchemas.cancelSubscription, 
     subscriptionController.cancelSubscription
 );
 
@@ -344,7 +346,7 @@ router.post('/:subscriptionId/cancel',
  */
 router.put('/:subscriptionId', 
     auth, 
-    validate(subscriptionSchemas.updateSubscription), 
+    validation.subscriptionSchemas.updateSubscription, 
     subscriptionController.updateSubscription
 );
 
@@ -375,4 +377,4 @@ router.put('/:subscriptionId',
  */
 router.post('/webhook', subscriptionController.handleWebhook);
 
-module.exports = router;
+export default router;

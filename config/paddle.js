@@ -1,4 +1,4 @@
-const { Paddle, Environment } = require('@paddle/paddle-node-sdk');
+import { Paddle, Environment } from '@paddle/paddle-node-sdk';
 
 // Paddle Configuration
 const paddleConfig = {
@@ -10,7 +10,7 @@ const paddleConfig = {
 // Initialize Paddle instance
 const paddle = new Paddle(paddleConfig);
 
-module.exports = {
+export {
     paddle,
     paddleConfig
 };

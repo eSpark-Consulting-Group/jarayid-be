@@ -1,6 +1,6 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
-const subscriptionSchemas = {
+export const subscriptionSchemas = {
     createCheckout: {
         body: Joi.object({
             priceId: Joi.string().required().messages({
@@ -71,5 +71,3 @@ const subscriptionSchemas = {
         })
     }
 };
-
-module.exports = { subscriptionSchemas };

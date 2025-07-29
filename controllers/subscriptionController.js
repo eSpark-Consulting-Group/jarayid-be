@@ -1,6 +1,24 @@
-const paddleSubscriptionService = require('../services/paddleSubscriptionService');
-const { successResponse, errorResponse } = require('../utils/response');
-const logger = require('../utils/logger');
+import paddleSubscriptionService from '../services/paddleSubscriptionService.js';
+import response from '../utils/response.js';
+import prisma from '../prisma/index.js';
+import winston from 'winston';
+
+// Logger configuration
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return `${timestamp} [${level.toUpperCase()}] Subscription: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        })
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'combined.log' })
+    ]
+});
+
+const { success: successResponse, error: errorResponse } = response;
 
 class SubscriptionController {
     
@@ -256,8 +274,8 @@ class SubscriptionController {
             }
 
             // Update subscription in Paddle
-            const { paddle } = require('../config/paddle');
-            const updatedPaddleSubscription = await paddle.subscriptions.update(
+            const { paddle } = await import('../config/paddle.js');
+            const updatedPaddleSubscription = await paddle.paddle.subscriptions.update(
                 subscription.paddleSubscriptionId,
                 {
                     items: [{
@@ -301,4 +319,4 @@ class SubscriptionController {
     }
 }
 
-module.exports = new SubscriptionController();
+export default SubscriptionController;
