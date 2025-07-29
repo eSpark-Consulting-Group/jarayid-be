@@ -738,7 +738,7 @@ router.get('/favorites', auth, validation.article.query, articleController.getUs
 
 /**
  * @swagger
- * /articles/read-later:
+ * /articles/feeds/read-later:
  *   get:
  *     summary: Get user's read later articles
  *     tags: [Articles]
@@ -798,7 +798,7 @@ router.get('/favorites', auth, validation.article.query, articleController.getUs
  *       401:
  *         description: Unauthorized
  */
-router.get('/read-later', auth, validation.article.query, articleController.getUserReadLater);
+router.get('/feeds/read-later', auth, validation.article.query, articleController.getUserReadLater);
 
 /**
  * @swagger
