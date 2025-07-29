@@ -10,6 +10,7 @@ import aiSummaryRouter from './aiSummary.js';
 import youtubeContentRouter from './youtubeContent.js';
 import staticPagesRouter from './staticPages.js';
 import contactUsRoutes from "./contact.js";
+const subscriptionsRouter = require('./subscriptions.js');
 
 
 // User related routes
@@ -35,6 +36,9 @@ router.use('/youtube-content', youtubeContentRouter);
 
 // Static pages related routes
 router.use("/static-pages", staticPagesRouter);
+
+// Subscriptions related routes
+router.use('/subscriptions', subscriptionsRouter);
 
 // Contact Us related routes
 router.use("/contact-us", contactUsRoutes);

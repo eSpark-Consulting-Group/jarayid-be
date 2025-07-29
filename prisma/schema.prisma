@@ -139,7 +139,26 @@ model Contact {
   @@map("contacts")
 }
 
-
+model SponsorAccount {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(200)
+  businessName  String   @db.VarChar(200)
+  website       String?  @db.VarChar(500)
+  contactEmail  String   @db.VarChar(200)
+  category      String   @db.VarChar(100)
+  contact       String?  @db.VarChar(500)
+  status        SponsorStatus @default(ACTIVE)
+  phone         String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+ 
+  @@map("sponsor_accounts")
+}
+ 
+enum SponsorStatus {
+  ACTIVE
+  INACTIVE
+}
 
 model StaticPage {
   id        String   @id @default(uuid())
@@ -175,14 +194,39 @@ model ReadLater {
 }
 
 model Subscription {
-  id          String    @id @default(uuid())
-  userId      String
-  isPremium   Boolean
-  trialEndsAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id])
-
+  id                    String               @id @default(uuid())
+  userId                String
+  isPremium             Boolean              @default(false)
+  trialEndsAt           DateTime?
+  
+  // Paddle Integration Fields
+  paddleSubscriptionId  String?              @unique @db.VarChar(255)
+  paddleCustomerId      String?              @db.VarChar(255)
+  paddlePlanId          String?              @db.VarChar(255)
+  status                SubscriptionStatus   @default(INACTIVE)
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean              @default(false)
+  cancelledAt           DateTime?
+  pausedAt              DateTime?
+  resumedAt             DateTime?
+  
+  // Payment Information
+  currency              String?              @db.VarChar(3)
+  amount                Float?
+  interval              SubscriptionInterval?
+  
+  // Metadata
+  metadata              Json?
+  lastPaymentAt         DateTime?
+  nextPaymentAt         DateTime?
+  failedPaymentCount    Int                  @default(0)
+  
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  user                  User                 @relation(fields: [userId], references: [id])
+  
+  @@unique([userId], name: "unique_user_subscription")
   @@map("subscriptions")
 }
 
@@ -271,6 +315,22 @@ enum AdType {
 enum YouTubeContentType {
   SHORTS
   FULL_VIDEO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  PAUSED
+  PAST_DUE
+  TRIALING
+  EXPIRED
+}
+
+enum SubscriptionInterval {
+  MONTHLY
+  YEARLY
+  WEEKLY
 }
 
 
