@@ -139,36 +139,6 @@ class StaticPageController {
     }
   }
 
-  async getStaticPageBySlug(req, res) {
-    const { slug } = req.params;
-
-    try {
-      const page = await prisma.staticPage.findFirst({
-        where: { slug },
-      });
-
-      if (!page) {
-        return response.notFound(res, "Static Page not found");
-      }
-
-      return response.success(
-        res,
-        { staticPage: page },
-        "Static Page retrieved successfully"
-      );
-    } catch (error) {
-      logger.error("Get Static Page by Slug error:", {
-        error: error?.message || error,
-      });
-      return response.error(
-        res,
-        "Failed to retrieve Static Page",
-        500,
-        error.message
-      );
-    }
-  }
-
   async getStaticPageById(req, res) {
     const { id } = req.params;
 

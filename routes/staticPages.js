@@ -30,10 +30,10 @@ const validation = createValidationMiddleware(schemas);
  *             properties:
  *               title:
  *                 type: string
- *                 example: About Us
+ *                 example: Privacy Policy
  *               slug:
  *                 type: string
- *                 example: about-us
+ *                 example: privacy-policy
  *               content:
  *                 type: json
  *                 example: {"welcomeMessage": "Welcome to our company..."}
@@ -174,19 +174,19 @@ router.get("/", auth, validation.staticPage.query, staticPageController.getAllSt
 
 /**
  * @swagger
- * /static-pages/{slug}:
+ * /static-pages/{id}:
  *   get:
- *     summary: Get a static page by its slug
+ *     summary: Get a static page by its ID
  *     tags: [StaticPages]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: slug
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Slug of the static page
+ *         description: ID of the static page
  *     responses:
  *       200:
  *         description: Static page found successfully
@@ -204,7 +204,7 @@ router.get("/", auth, validation.staticPage.query, staticPageController.getAllSt
  *                 data:
  *                   $ref: '#/components/schemas/StaticPage'
  *       400:
- *         description: Invalid slug
+ *         description: Invalid ID
  *       404:
  *         description: Static page not found
  *       401:
@@ -217,24 +217,24 @@ router.get(
   "/:id",
   auth,
   validation.staticPage.params,
-  staticPageController.getStaticPageBySlug
+  staticPageController.getStaticPageById
 );
 
 /**
  * @swagger
- * /static-pages/{slug}:
+ * /static-pages/{id}:
  *   put:
- *     summary: Update a static page by slug (Admin only)
+ *     summary: Update a static page by ID (Admin only)
  *     tags: [StaticPages]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: slug
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Slug of the static page to update
+ *         description: ID of the static page to update
  *     requestBody:
  *       required: true
  *       content:
@@ -268,7 +268,7 @@ router.get(
  *                 data:
  *                   $ref: '#/components/schemas/StaticPage'
  *       400:
- *         description: Invalid input or slug
+ *         description: Invalid input or ID
  *       401:
  *         description: Unauthorized
  *       403:
@@ -290,19 +290,19 @@ router.put(
 
 /**
  * @swagger
- * /static-pages/{slug}:
+ * /static-pages/{id}:
  *   delete:
- *     summary: Delete a static page by slug (Admin only)
+ *     summary: Delete a static page by id (Admin only)
  *     tags: [StaticPages]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: slug
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Slug of the static page to delete
+ *         description: ID of the static page to delete
  *     responses:
  *       200:
  *         description: Static page deleted successfully
@@ -318,7 +318,7 @@ router.put(
  *                   type: string
  *                   example: Static page deleted successfully
  *       400:
- *         description: Invalid slug
+ *         description: Invalid id
  *       401:
  *         description: Unauthorized
  *       403:
