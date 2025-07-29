@@ -38,19 +38,82 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(compression());
-app.use(cors({
-    origin: [
-        'http://localhost:3000',
-        'http://localhost:8080',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:8080',
-        'https://jarayid.esparkconsultants.com',
-        'https://jarayid.esparkconsultants.com/'
-    ],
+
+// Middleware
+app.use(helmet());
+app.use(compression());
+
+// Enhanced CORS configuration with environment-based origins
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Get origins from environment variable or use defaults
+        const envOrigins = process.env.CORS_ORIGINS 
+            ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+            : [];
+            
+        const allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:8080',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:8080',
+            'https://jarayid.esparkconsultants.com',
+            'https://jarayid.esparkconsultants.com/',
+            'https://www.jarayid.esparkconsultants.com',
+            'https://www.jarayid.esparkconsultants.com/',
+            // Add staging/development domains
+            'https://jarayid-frontend.vercel.app',
+            'https://jarayid-frontend.netlify.app',
+            ...envOrigins
+        ];
+        
+        // Allow any localhost/127.0.0.1 origins in development
+        if (process.env.NODE_ENV === 'development') {
+            if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+                return callback(null, true);
+            }
+        }
+        
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin + '/')) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            console.log('Allowed origins:', allowedOrigins);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+        'Content-Type', 
+        'Authorization', 
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Cache-Control',
+        'X-File-Name',
+        'X-CSRF-Token',
+        'Access-Control-Allow-Origin'
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200, // For legacy browser support
+    preflightContinue: false
+};
+
+app.use(cors(corsOptions));
+
+// Additional CORS handling for preflight requests
+app.options('*', cors(corsOptions));
+
+// CORS debugging middleware (can be removed in production)
+app.use((req, res, next) => {
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`CORS Request: ${req.method} ${req.url} from ${req.headers.origin || 'no-origin'}`);
+    }
+    next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
