@@ -10,6 +10,7 @@ import aiSummaryRouter from './aiSummary.js';
 import youtubeContentRouter from './youtubeContent.js';
 import staticPagesRouter from './staticPages.js';
 import contactUsRoutes from "./contact.js";
+import sponsorAccountRoutes from './sponsorAccount.js';
 
 
 // User related routes
@@ -38,5 +39,8 @@ router.use("/static-pages", staticPagesRouter);
 
 // Contact Us related routes
 router.use("/contact-us", contactUsRoutes);
+
+// Sponsor Account related routes
+router.use('/sponsor-accounts', sponsorAccountRoutes);
 
 export default router;

@@ -235,6 +235,28 @@ model ArticleView {
   @@map("article_views")
 }
 
+model SponsorAccount {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(200)
+  businessName  String   @db.VarChar(200)
+  website       String?  @db.VarChar(500)
+  contactEmail  String   @db.VarChar(200)
+  category      String   @db.VarChar(100)
+  contract      String?  @db.VarChar(500)
+  status        SponsorStatus @default(ACTIVE)
+  phone         String?  @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("sponsor_accounts")
+}
+
+enum SponsorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+
 enum Status {
   ARCHIVE
   DRAFT
