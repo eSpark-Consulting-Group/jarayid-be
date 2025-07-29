@@ -109,9 +109,9 @@ class RSSFeedController {
     async getAllRSSFeeds(req, res) {
         try {
             const { page = 1, limit = 10, status, categoryId, subType, search } = req.query;
-            const { skip, take } = pagination.getPaginationParams(req.query, { 
-                defaultLimit: 10, 
-                maxLimit: 200 
+            const { skip, take } = pagination.getPaginationParams(req.query, {
+                defaultLimit: 10,
+                maxLimit: 200
             });
 
             const where = {};
@@ -431,19 +431,19 @@ class RSSFeedController {
             const manualArticles = totalArticles - rssFeedArticles;
 
             // Calculate percentages
-            const publishedRSSFeedsPercentage = totalRSSFeeds > 0 ? 
+            const publishedRSSFeedsPercentage = totalRSSFeeds > 0 ?
                 Math.round((publishedRSSFeeds / totalRSSFeeds) * 100) : 0;
-            
-            const inactiveRSSFeedsPercentage = totalRSSFeeds > 0 ? 
+
+            const inactiveRSSFeedsPercentage = totalRSSFeeds > 0 ?
                 Math.round((inactiveRSSFeeds / totalRSSFeeds) * 100) : 0;
-            
-            const rssFeedArticlesPercentage = totalArticles > 0 ? 
+
+            const rssFeedArticlesPercentage = totalArticles > 0 ?
                 Math.round((rssFeedArticles / totalArticles) * 100) : 0;
-            
-            const manualArticlesPercentage = totalArticles > 0 ? 
+
+            const manualArticlesPercentage = totalArticles > 0 ?
                 Math.round((manualArticles / totalArticles) * 100) : 0;
-            
-            const recentRSSArticlesPercentage = rssFeedArticles > 0 ? 
+
+            const recentRSSArticlesPercentage = rssFeedArticles > 0 ?
                 Math.round((recentArticles / rssFeedArticles) * 100) : 0;
 
             const stats = {
@@ -597,14 +597,14 @@ class RSSFeedController {
 
             // Build where clause for feeds
             const where = {};
-            
+
             if (search) {
                 where.OR = [
                     { name: { contains: search, mode: 'insensitive' } },
                     { url: { contains: search, mode: 'insensitive' } }
                 ];
             }
-            
+
             if (status) where.status = status;
             if (categoryId) where.categoryId = categoryId;
             if (subType) where.subType = subType;
@@ -661,6 +661,7 @@ class RSSFeedController {
                         rssFeedId: feed.id // Direct relationship lookup
                     };
 
+
                     // Get only total article count
                     const totalArticles = await prisma.article.count({ where: articleWhere });
 
@@ -678,9 +679,12 @@ class RSSFeedController {
                 totalArticlesFromFeeds: feedsWithStats.reduce((sum, f) => sum + f.totalArticles, 0)
             };
 
+            const rssFeedsWithActiveStatus = await RSSFeedChecker.addActiveStatus(feedsWithStats);
+
+
             // Create paginated response
             const paginatedResponse = pagination.createPaginatedResponse(
-                feedsWithStats,
+                rssFeedsWithActiveStatus,
                 req.query,
                 total,
                 { defaultLimit: 10, maxLimit: 100 }
@@ -767,7 +771,7 @@ class RSSFeedController {
     async getQueueJobs(req, res) {
         try {
             const { status = 'completed', limit = 10 } = req.query;
-            
+
             const jobs = await rssQueueService.getRecentJobs(status, parseInt(limit));
 
             return response.success(res, {
