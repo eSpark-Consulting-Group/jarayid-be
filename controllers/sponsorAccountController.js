@@ -26,27 +26,27 @@ class SponsorAccountController {
   }
 
   // Create Sponsor Account
-  async create(req, res) {
+  async createSponsorAccount(req, res) {
     const {
       name,
       businessName,
       website,
       contactEmail,
       category,
-      contract,
+      contact,
       status,
       phone,
     } = req.body;
 
     try {
-      const sponsor = await this.prisma.sponsorAccount.create({
+      const sponsor = await prisma.sponsorAccount.create({
         data: {
           name,
           businessName,
           website,
           contactEmail,
           category,
-          contract,
+          contact,
           status,
           phone,
         },
@@ -67,9 +67,9 @@ class SponsorAccountController {
   }
 
   // Get all Sponsor Accounts
-  async getAll(req, res) {
+  async getAllSponsorAccounts(req, res) {
     try {
-      const sponsors = await this.prisma.sponsorAccount.findMany({
+      const sponsors = await prisma.sponsorAccount.findMany({
         orderBy: { createdAt: "desc" },
       });
 
@@ -87,11 +87,11 @@ class SponsorAccountController {
   }
 
   // Get Sponsor by ID
-  async getById(req, res) {
+  async getSponsorAccountById(req, res) {
     const { id } = req.params;
 
     try {
-      const sponsor = await this.prisma.sponsorAccount.findUnique({
+      const sponsor = await prisma.sponsorAccount.findUnique({
         where: { id },
       });
 
@@ -113,7 +113,7 @@ class SponsorAccountController {
   }
 
   // Update Sponsor Account
-  async update(req, res) {
+  async updateSponsorAccount(req, res) {
     const { id } = req.params;
     const {
       name,
@@ -121,13 +121,13 @@ class SponsorAccountController {
       website,
       contactEmail,
       category,
-      contract,
+      contact,
       status,
       phone,
     } = req.body;
 
     try {
-      const existing = await this.prisma.sponsorAccount.findUnique({
+      const existing = await prisma.sponsorAccount.findUnique({
         where: { id },
       });
 
@@ -135,7 +135,7 @@ class SponsorAccountController {
         return response.error(res, "Sponsor account not found", 404);
       }
 
-      const updated = await this.prisma.sponsorAccount.update({
+      const updated = await prisma.sponsorAccount.update({
         where: { id },
         data: {
           name,
@@ -143,7 +143,7 @@ class SponsorAccountController {
           website,
           contactEmail,
           category,
-          contract,
+          contact,
           status,
           phone,
         },
@@ -163,11 +163,11 @@ class SponsorAccountController {
   }
 
   // Delete Sponsor Account
-  async delete(req, res) {
+  async deleteSponsorAccount(req, res) {
     const { id } = req.params;
 
     try {
-      const existing = await this.prisma.sponsorAccount.findUnique({
+      const existing = await prisma.sponsorAccount.findUnique({
         where: { id },
       });
 
@@ -175,7 +175,7 @@ class SponsorAccountController {
         return response.error(res, "Sponsor account not found", 404);
       }
 
-      await this.prisma.sponsorAccount.delete({ where: { id } });
+      await prisma.sponsorAccount.delete({ where: { id } });
 
       return response.success(
         res,

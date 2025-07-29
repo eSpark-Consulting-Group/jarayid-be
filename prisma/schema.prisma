@@ -242,7 +242,7 @@ model SponsorAccount {
   website       String?  @db.VarChar(500)
   contactEmail  String   @db.VarChar(200)
   category      String   @db.VarChar(100)
-  contract      String?  @db.VarChar(500)
+  contact       String?  @db.VarChar(500)
   status        SponsorStatus @default(ACTIVE)
   phone         String?  @db.VarChar(20)
   createdAt     DateTime @default(now())

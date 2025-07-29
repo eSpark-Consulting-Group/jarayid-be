@@ -2,13 +2,14 @@
 // This file exports the paths to all schema files for swagger-jsdoc
 export const schemaPaths = [
     './docs/userSchemas.js',
-    './docs/categorySchemas.js', 
+    './docs/categorySchemas.js',
     './docs/rssFeedSchemas.js',
     './docs/articleSchemas.js',
     './docs/commentSchemas.js',
     './docs/commonSchemas.js',
     './docs/staticPageSchemas.js',
     './docs/contactUsSchemas.js',
+    './docs/sponsorAccountSchemas.js',
 ];
 
 export const routePaths = [
