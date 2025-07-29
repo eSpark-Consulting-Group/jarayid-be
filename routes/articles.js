@@ -677,7 +677,7 @@ router.post('/:id/toggle-read-later', auth, validation.article.params, articleCo
 
 /**
  * @swagger
- * /articles/favorites:
+ * /articles/user/favorites:
  *   get:
  *     summary: Get user's favorite articles
  *     tags: [Articles]
@@ -734,7 +734,7 @@ router.post('/:id/toggle-read-later', auth, validation.article.params, articleCo
  *       401:
  *         description: Unauthorized
  */
-router.get('/favorites', auth, validation.article.query, articleController.getUserFavorites);
+router.get('/user/favorites', auth, validation.article.query, articleController.getUserFavorites);
 
 /**
  * @swagger
