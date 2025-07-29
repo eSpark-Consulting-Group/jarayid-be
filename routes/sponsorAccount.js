@@ -49,6 +49,8 @@ router.post(
  *   get:
  *     summary: Get all sponsor accounts with pagination
  *     tags: [Sponsor Accounts]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -79,6 +81,8 @@ router.post(
  */
 router.get(
   "/",
+  auth,
+  adminAuth,
   validation.sponsorAccount.query,
   sponsorAccountController.getAllSponsorAccounts
 );
@@ -89,6 +93,8 @@ router.get(
  *   get:
  *     summary: Get sponsor account by ID
  *     tags: [Sponsor Accounts]
+ *     security:
+ *        - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -109,6 +115,8 @@ router.get(
  */
 router.get(
   "/:id",
+  auth,
+  adminAuth,
   validation.sponsorAccount.params,
   sponsorAccountController.getSponsorAccountById
 );

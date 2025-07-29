@@ -1,6 +1,7 @@
 import { response } from "../utils/index.js";
 import winston from "winston";
 import prisma from "../prisma/index.js";
+import { pagination } from "../utils/index.js";
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -66,23 +67,165 @@ class SponsorAccountController {
     }
   }
 
-  // Get all Sponsor Accounts
+  // Get All Sponsor Accounts with pagination, filtering, sorting, and meta
+  // async getAllSponsorAccounts(req, res) {
+  //   try {
+  //     const {
+  //       page = 1,
+  //       limit = 10,
+  //       search,
+  //       status,
+  //       sortBy = "createdAt",
+  //       sortOrder = "desc",
+  //       dateFrom,
+  //       dateTo,
+  //     } = req.query;
+
+  //     // Pagination params
+  //     const { skip, take } = pagination.getPaginationParams(req.query, {
+  //       defaultLimit: 10,
+  //       maxLimit: 200,
+  //     });
+
+  //     const where = {};
+
+  //     // Search filter
+  //     if (search) {
+  //       where.OR = [
+  //         { name: { contains: search, mode: "insensitive" } },
+  //         { company: { contains: search, mode: "insensitive" } },
+  //         { email: { contains: search, mode: "insensitive" } },
+  //         { website: { contains: search, mode: "insensitive" } },
+  //       ];
+  //     }
+
+  //     // Status filter (if applicable in schema)
+  //     if (status !== undefined) {
+  //       if (status === "true" || status === true) {
+  //         where.status = true;
+  //       } else if (status === "false" || status === false) {
+  //         where.status = false;
+  //       }
+  //     }
+
+  //     // Date range filter for createdAt
+  //     if (dateFrom || dateTo) {
+  //       where.createdAt = {};
+  //       if (dateFrom) {
+  //         where.createdAt.gte = new Date(dateFrom);
+  //       }
+  //       if (dateTo) {
+  //         const toDate = new Date(dateTo);
+  //         toDate.setHours(23, 59, 59, 999);
+  //         where.createdAt.lte = toDate;
+  //       }
+  //     }
+
+  //     // Sorting config
+  //     const validSortFields = ["name", "company", "createdAt", "email"];
+  //     const validSortOrders = ["asc", "desc"];
+  //     const field = validSortFields.includes(sortBy) ? sortBy : "createdAt";
+  //     const order = validSortOrders.includes(sortOrder.toLowerCase())
+  //       ? sortOrder.toLowerCase()
+  //       : "desc";
+
+  //     const [sponsors, total] = await Promise.all([
+  //       prisma.sponsorAccount.findMany({
+  //         where,
+  //         skip,
+  //         take,
+  //         orderBy: { [field]: order },
+  //       }),
+  //       prisma.sponsorAccount.count({ where }),
+  //     ]);
+
+  //     // Paginated response
+  //     const paginatedResponse = pagination.createPaginatedResponse(
+  //       sponsors,
+  //       req.query,
+  //       total,
+  //       { defaultLimit: 10, maxLimit: 200 }
+  //     );
+
+  //     // Meta info
+  //     if (status !== undefined) {
+  //       paginatedResponse.meta.filteredByStatus = status;
+  //     }
+
+  //     return response.success(
+  //       res,
+  //       paginatedResponse,
+  //       "Sponsor accounts retrieved successfully"
+  //     );
+  //   } catch (error) {
+  //     logger.error("Get sponsor accounts error:", {
+  //       error: error?.message || error,
+  //       query: req.query,
+  //     });
+  //     return response.error(
+  //       res,
+  //       "Failed to retrieve sponsor accounts",
+  //       500,
+  //       error.message
+  //     );
+  //   }
+  // }
+
   async getAllSponsorAccounts(req, res) {
     try {
-      const sponsors = await prisma.sponsorAccount.findMany({
-        orderBy: { createdAt: "desc" },
+      const { page = 1, limit = 10, search } = req.query;
+
+      // Pagination params
+      const { skip, take } = pagination.getPaginationParams(req.query, {
+        defaultLimit: 10,
+        maxLimit: 200,
       });
+
+      const where = {};
+
+      // Search filter
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: "insensitive" } },
+          { businessName: { contains: search, mode: "insensitive" } },
+          { contactEmail: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      const [sponsors, total] = await Promise.all([
+        prisma.sponsorAccount.findMany({
+          where,
+          skip,
+          take,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.sponsorAccount.count({ where }),
+      ]);
+
+      // Paginated response
+      const paginatedResponse = pagination.createPaginatedResponse(
+        sponsors,
+        req.query,
+        total,
+        { defaultLimit: 10, maxLimit: 200 }
+      );
 
       return response.success(
         res,
-        sponsors,
+        paginatedResponse,
         "Sponsor accounts retrieved successfully"
       );
     } catch (error) {
       logger.error("Get sponsor accounts error:", {
         error: error?.message || error,
+        query: req.query,
       });
-      return response.error(res, "Failed to retrieve sponsor accounts", 500);
+      return response.error(
+        res,
+        "Failed to retrieve sponsor accounts",
+        500,
+        error.message
+      );
     }
   }
 
