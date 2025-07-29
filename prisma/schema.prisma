@@ -280,6 +280,16 @@ model ArticleView {
   @@unique([articleId, ipAddress], name: "unique_ip_article_view")
   @@map("article_views")
 }
+
+model ExternalLink {
+  id               Int      @id @default(autoincrement())
+  toolName         String   @db.VarChar(255)
+  toolRedirectLink String   @db.VarChar(1024)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
  
 enum Status {
   ARCHIVE
