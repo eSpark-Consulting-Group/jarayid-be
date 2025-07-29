@@ -6,7 +6,11 @@ import articleSchema from './article.js';
 import commentSchema from './comment.js';
 import youtubeContentSchema from './youtubeContent.js';
 import contactUsSchema from './contact.js';
+
+import sponsorAccountSchema from './sponsorAccount.js';
+
 import { subscriptionSchemas } from './subscription.js';
+
 
 export default {
     category: categorySchema,
@@ -17,5 +21,7 @@ export default {
     comment: commentSchema,
     youtubeContent: youtubeContentSchema,
     contactUs: contactUsSchema,
+    sponsorAccount: sponsorAccountSchema,
     subscriptionSchemas
+
 };
