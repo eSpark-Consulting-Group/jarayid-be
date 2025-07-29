@@ -138,7 +138,7 @@ model Contact {
  
   @@map("contacts")
 }
- 
+
 model SponsorAccount {
   id            String   @id @default(uuid())
   name          String   @db.VarChar(200)
@@ -159,7 +159,7 @@ enum SponsorStatus {
   ACTIVE
   INACTIVE
 }
- 
+
 model StaticPage {
   id        String   @id @default(uuid())
   title     String   @unique
@@ -198,7 +198,7 @@ model Subscription {
   userId                String
   isPremium             Boolean              @default(false)
   trialEndsAt           DateTime?
- 
+
   // Paddle Integration Fields
   paddleSubscriptionId  String?              @unique @db.VarChar(255)
   paddleCustomerId      String?              @db.VarChar(255)
@@ -210,22 +210,24 @@ model Subscription {
   cancelledAt           DateTime?
   pausedAt              DateTime?
   resumedAt             DateTime?
- 
+
   // Payment Information
   currency              String?              @db.VarChar(3)
   amount                Float?
   interval              SubscriptionInterval?
- 
+
   // Metadata
   metadata              Json?
   lastPaymentAt         DateTime?
   nextPaymentAt         DateTime?
   failedPaymentCount    Int                  @default(0)
- 
+
+  
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   user                  User                 @relation(fields: [userId], references: [id])
- 
+  
+
   @@unique([userId], name: "unique_user_subscription")
   @@map("subscriptions")
 }
@@ -316,7 +318,7 @@ enum YouTubeContentType {
   SHORTS
   FULL_VIDEO
 }
- 
+
 enum SubscriptionStatus {
   ACTIVE
   INACTIVE
@@ -326,9 +328,11 @@ enum SubscriptionStatus {
   TRIALING
   EXPIRED
 }
- 
+
 enum SubscriptionInterval {
   MONTHLY
   YEARLY
   WEEKLY
+
 }
+

@@ -1,9 +1,7 @@
 import jwt from "jsonwebtoken";
 import { configs } from "../config/config.js";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma/index.js"; // Use shared instance
 import response from "../utils/response.js";
-
-const prisma = new PrismaClient();
 
 /**
  * Optional authentication middleware

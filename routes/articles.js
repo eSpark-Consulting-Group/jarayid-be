@@ -425,7 +425,7 @@ router.delete('/:id', auth, adminAuth, validation.article.params, articleControl
 
 /**
  * @swagger
- * /articles/bulk-delete:
+ * /articles/delete/bulk-delete:
  *   delete:
  *     summary: Delete multiple articles in bulk (Admin only)
  *     tags: [Articles]
@@ -499,7 +499,7 @@ router.delete('/:id', auth, adminAuth, validation.article.params, articleControl
  *       500:
  *         description: Internal server error
  */
-router.delete('/bulk-delete', auth, adminAuth, validation.article.bulkDelete, articleController.deleteMultipleArticles);
+router.delete('/delete/bulk-delete', auth, adminAuth, validation.article.bulkDelete, articleController.deleteMultipleArticles);
 
 /**
  * @swagger

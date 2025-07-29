@@ -20,7 +20,6 @@ const logger = winston.createLogger({
 // Create a single Prisma Client instance with optimized settings
 const prisma = new PrismaClient({
     log: [
-        { emit: 'event', level: 'query' },
         { emit: 'event', level: 'info' },
         { emit: 'event', level: 'warn' },
         { emit: 'event', level: 'error' }
@@ -31,6 +30,14 @@ const prisma = new PrismaClient({
             url: process.env.DATABASE_URL
         }
     }
+});
+
+// Connection management: Ensure proper connection reuse
+prisma.$connect().then(() => {
+    logger.info('🔗 Database connection established');
+}).catch((error) => {
+    logger.error('❌ Failed to connect to database:', error);
+    process.exit(1);
 });
 
 // Setup Prisma event logging
