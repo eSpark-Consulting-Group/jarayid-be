@@ -139,7 +139,7 @@ model Contact {
  
   @@map("contacts")
 }
-
+ 
 model SponsorAccount {
   id            String   @id @default(uuid())
   name          String   @db.VarChar(200)
@@ -160,7 +160,7 @@ enum SponsorStatus {
   ACTIVE
   INACTIVE
 }
-
+ 
 model StaticPage {
   id        String   @id @default(uuid())
   title     String   @unique
@@ -199,7 +199,7 @@ model Subscription {
   userId                String
   isPremium             Boolean              @default(false)
   trialEndsAt           DateTime?
-
+ 
   // Paddle Integration Fields
   paddleSubscriptionId  String?              @unique @db.VarChar(255)
   paddleCustomerId      String?              @db.VarChar(255)
@@ -211,24 +211,24 @@ model Subscription {
   cancelledAt           DateTime?
   pausedAt              DateTime?
   resumedAt             DateTime?
-
+ 
   // Payment Information
   currency              String?              @db.VarChar(3)
   amount                Float?
   interval              SubscriptionInterval?
-
+ 
   // Metadata
   metadata              Json?
   lastPaymentAt         DateTime?
   nextPaymentAt         DateTime?
   failedPaymentCount    Int                  @default(0)
-
-  
+ 
+ 
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   user                  User                 @relation(fields: [userId], references: [id])
-  
-
+ 
+ 
   @@unique([userId], name: "unique_user_subscription")
   @@map("subscriptions")
 }
@@ -281,7 +281,7 @@ model ArticleView {
   @@unique([articleId, ipAddress], name: "unique_ip_article_view")
   @@map("article_views")
 }
-
+ 
 model ExternalLink {
   id               String   @id @default(uuid())
   toolName         String   @db.VarChar(255)
@@ -328,7 +328,7 @@ enum YouTubeContentType {
   SHORTS
   FULL_VIDEO
 }
-
+ 
 enum SubscriptionStatus {
   ACTIVE
   INACTIVE
@@ -338,11 +338,55 @@ enum SubscriptionStatus {
   TRIALING
   EXPIRED
 }
-
+ 
+model Cookie {
+  id          String     @id @default(uuid())
+  name        String     @unique @db.VarChar(100)
+  purpose     String     @db.VarChar(500)
+  duration    String     @db.VarChar(50)
+  category    CookieCategory @default(FUNCTIONAL)
+  isEssential Boolean    @default(false)
+  isEnabled   Boolean    @default(true)
+  description String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+ 
+  @@map("cookies")
+}
+ 
+model VisualAdPlacement {
+  id           String    @id @default(cuid())
+  platform     Platform
+  pageType     PageType
+  positionName String
+  adLink       String?   // Could be ad unit ID or URL
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+ 
+enum Platform {
+  WEB
+  APP
+}
+ 
+enum PageType {
+  MAIN_PAGE
+  ARTICLE_PAGE
+  CATEGORY
+}
+ 
+enum CookieCategory {
+  ESSENTIAL
+  FUNCTIONAL
+  ANALYTICS
+  MARKETING
+  PREFERENCES
+}
+ 
 enum SubscriptionInterval {
   MONTHLY
   YEARLY
   WEEKLY
-
+ 
 }
-

@@ -11,6 +11,7 @@ import youtubeContentRouter from './youtubeContent.js';
 import staticPagesRouter from './staticPages.js';
 import contactUsRoutes from "./contact.js";
 import externalLinkRoutes from './externalLinks.js';
+import visualAdPlacementRoutes from './visualAdPlacements.js';
 
 import sponsorAccountRoutes from './sponsorAccount.js';
 
@@ -52,5 +53,7 @@ router.use("/contact-us", contactUsRoutes);
 router.use('/sponsor-accounts', sponsorAccountRoutes);
 
 router.use('/external-links', externalLinkRoutes);
+// Visual Ad Placements related routes
+router.use('/visual-ad-placements', visualAdPlacementRoutes);
 
 export default router;
