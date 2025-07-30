@@ -3,7 +3,7 @@ import { Router } from "express";
 import schemas from "../schemas/index.js";
 import createValidationMiddleware from "../middleware/validate.js";
 import { VisualAdPlacementController } from "../controllers/index.js";
-import { /*auth*/ adminAuth } from "../middleware/index.js";
+import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
 const visualAdPlacementController = new VisualAdPlacementController();
@@ -43,8 +43,8 @@ const validation = createValidationMiddleware(schemas);
  */
 router.post(
   "/",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.visualAdPlacement.create,
   visualAdPlacementController.createVisualAdPlacement
 );
@@ -85,8 +85,8 @@ router.post(
  */
 router.get(
   "/",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.visualAdPlacement.query,
   visualAdPlacementController.getAllVisualAdPlacements
 );
@@ -118,8 +118,8 @@ router.get(
  */
 router.get(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.visualAdPlacement.params,
   visualAdPlacementController.getVisualAdPlacementById
 );
@@ -166,8 +166,8 @@ router.get(
  */
 router.put(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.visualAdPlacement.params,
   validation.visualAdPlacement.update,
   visualAdPlacementController.updateVisualAdPlacement
@@ -203,8 +203,8 @@ router.put(
  */
 router.delete(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.visualAdPlacement.params,
   visualAdPlacementController.deleteVisualAdPlacement
 );
