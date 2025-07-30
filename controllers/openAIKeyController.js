@@ -1,7 +1,7 @@
 // controllers/apiKeyController.js
 import { response } from "../utils/index.js";
 import winston from "winston";
-import prisma from "../prisma/index.js";
+import ApiKeyService from "../services/openAIKeyService.js";
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -23,15 +23,13 @@ const logger = winston.createLogger({
 
 class ApiKeyController {
   constructor() {
-    this.prisma = prisma;
+    this.apiKeyService = new ApiKeyService();
   }
 
-  // Get the current API Key (Admin only)
+  // Get the latest API Key
   async getApiKey(req, res) {
     try {
-      const apiKey = await prisma.apiKey.findFirst({
-        orderBy: { createdAt: "desc" },
-      });
+      const apiKey = await this.apiKeyService.getLatestKey();
 
       if (!apiKey) {
         return response.error(res, "API key not found", 404);
@@ -39,14 +37,12 @@ class ApiKeyController {
 
       return response.success(res, apiKey, "API key retrieved successfully");
     } catch (error) {
-      logger.error("Get API key error:", {
-        error: error?.message || error,
-      });
+      logger.error("Get API key error:", { error: error?.message || error });
       return response.error(res, "Failed to retrieve API key", 500);
     }
   }
 
-  // Save or update API Key (Admin only)
+  // Save or update API Key
   async saveApiKey(req, res) {
     const { key } = req.body;
 
@@ -55,25 +51,10 @@ class ApiKeyController {
     }
 
     try {
-      const existing = await prisma.apiKey.findFirst();
-
-      let savedKey;
-      if (existing) {
-        savedKey = await prisma.apiKey.update({
-          where: { id: existing.id },
-          data: { key },
-        });
-      } else {
-        savedKey = await prisma.apiKey.create({
-          data: { key },
-        });
-      }
-
+      const savedKey = await this.apiKeyService.saveOrUpdateKey(key);
       return response.success(res, savedKey, "API key saved successfully", 201);
     } catch (error) {
-      logger.error("Save API key error:", {
-        error: error?.message || error,
-      });
+      logger.error("Save API key error:", { error: error?.message || error });
       return response.error(res, "Failed to save API key", 500);
     }
   }

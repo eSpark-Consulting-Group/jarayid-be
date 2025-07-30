@@ -1,43 +1,103 @@
-// services/openAiKeyService.js
-import { prisma } from "../prisma/index.js";
-import dotenv from "dotenv";
+// services/openAIKey.service.js
+import { PrismaClient } from "@prisma/client";
+import winston from "winston";
 
-dotenv.config();
+const prisma = new PrismaClient();
 
-/**
- * Get OpenAI API key.
- * 1. Try from database (first record in ApiKey table)
- * 2. Fallback to .env if not found
- */
-export async function getOpenAiApiKey() {
-  const record = await prisma.apiKey.findFirst();
+// Logger setup
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      return `${timestamp} [${level.toUpperCase()}] OpenAI Key Service: ${message} ${
+        Object.keys(meta).length ? JSON.stringify(meta) : ""
+      }`;
+    })
+  ),
+  transports: [
+    new winston.transports.File({ filename: "error.log", level: "error" }),
+    new winston.transports.File({ filename: "combined.log" }),
+    new winston.transports.Console({ format: winston.format.simple() }),
+  ],
+});
 
-  if (record?.key) {
-    return record.key;
+class OpenAIKeyService {
+  async getAllKeys() {
+    try {
+      const keys = await prisma.apiKey.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      logger.info(`Retrieved ${keys.length} API keys`);
+      return keys;
+    } catch (error) {
+      logger.error("Error retrieving API keys", { error: error.message });
+      throw error;
+    }
   }
 
-  return process.env.OPENAI_API_KEY || null;
+  async getKeyById(id) {
+    try {
+      const key = await prisma.apiKey.findUnique({ where: { id } });
+      if (!key) logger.warn(`API key not found for ID: ${id}`);
+      return key;
+    } catch (error) {
+      logger.error("Error retrieving API key", { error: error.message, id });
+      throw error;
+    }
+  }
+
+  async createKey(data) {
+    try {
+      const newKey = await prisma.apiKey.create({ data });
+      logger.info(`Created new API key: ${newKey.id}`);
+      return newKey;
+    } catch (error) {
+      logger.error("Error creating API key", { error: error.message, data });
+      throw error;
+    }
+  }
+
+  async updateKey(id, data) {
+    try {
+      const updatedKey = await prisma.apiKey.update({
+        where: { id },
+        data,
+      });
+      logger.info(`Updated API key: ${id}`);
+      return updatedKey;
+    } catch (error) {
+      logger.error("Error updating API key", {
+        error: error.message,
+        id,
+        data,
+      });
+      throw error;
+    }
+  }
+
+  async deleteKey(id) {
+    try {
+      const deletedKey = await prisma.apiKey.delete({ where: { id } });
+      logger.info(`Deleted API key: ${id}`);
+      return deletedKey;
+    } catch (error) {
+      logger.error("Error deleting API key", { error: error.message, id });
+      throw error;
+    }
+  }
+
+  async validateKey(apiKey) {
+    try {
+      const key = await prisma.apiKey.findFirst({ where: { key: apiKey } });
+      const isValid = !!key;
+      logger.info(`API key validation result: ${isValid}`);
+      return isValid;
+    } catch (error) {
+      logger.error("Error validating API key", { error: error.message });
+      throw error;
+    }
+  }
 }
 
-/**
- * Save or update OpenAI API key in database
- * @param {string} key - New API key to store
- */
-export async function saveOpenAiApiKey(key) {
-  if (!key) {
-    throw new Error("API key is required");
-  }
-
-  const existing = await prisma.apiKey.findFirst();
-
-  if (existing) {
-    return prisma.apiKey.update({
-      where: { id: existing.id },
-      data: { key },
-    });
-  }
-
-  return prisma.apiKey.create({
-    data: { key },
-  });
-}
+export default new OpenAIKeyService();

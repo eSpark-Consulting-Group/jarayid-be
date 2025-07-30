@@ -1,7 +1,6 @@
-// routes/apiKey.js
 import { Router } from "express";
 
-import { ApiKeyController } from "../controllers/index.js";
+import ApiKeyController from "../controllers/index.js";
 import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();

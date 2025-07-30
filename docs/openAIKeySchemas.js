@@ -7,7 +7,7 @@
  *       properties:
  *         id:
  *           type: string
- *           description: Unique API key ID
+ *           description: Unique API key ID (UUID)
  *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         key:
  *           type: string
@@ -28,7 +28,7 @@
  *       required:
  *         - key
  *
- *     ApiKeyCreate:
+ *     ApiKeySave:
  *       type: object
  *       properties:
  *         key:
@@ -39,14 +39,4 @@
  *           example: "sk_live_51HqN4s...AbCdEf"
  *       required:
  *         - key
- *
- *     ApiKeyUpdate:
- *       type: object
- *       properties:
- *         key:
- *           type: string
- *           description: The API key string
- *           minLength: 10
- *           maxLength: 255
- *           example: "sk_updated_51HqN4s...XyZ123"
  */
