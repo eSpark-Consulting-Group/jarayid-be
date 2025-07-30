@@ -489,11 +489,47 @@ class UserController {
                 isSocialLogin,
                 subscriptionStatus,
                 sortBy = 'createdAt',
-                sortOrder = 'desc'
+                sortOrder = 'desc',
+                from,
+                to
             } = req.query;
 
             // Build where conditions
             const where = {};
+
+            // Date range filtering based on createdAt
+            if (from || to) {
+                where.createdAt = {};
+                
+                if (from) {
+                    // Parse from date and set to start of day
+                    const fromDate = new Date(from);
+                    if (isNaN(fromDate.getTime())) {
+                        return response.error(res, 'Invalid "from" date format. Please use YYYY-MM-DD format.', 400);
+                    }
+                    fromDate.setHours(0, 0, 0, 0);
+                    where.createdAt.gte = fromDate;
+                }
+                
+                if (to) {
+                    // Parse to date and set to end of day
+                    const toDate = new Date(to);
+                    if (isNaN(toDate.getTime())) {
+                        return response.error(res, 'Invalid "to" date format. Please use YYYY-MM-DD format.', 400);
+                    }
+                    toDate.setHours(23, 59, 59, 999);
+                    where.createdAt.lte = toDate;
+                }
+
+                // Validate date range
+                if (from && to) {
+                    const fromDate = new Date(from);
+                    const toDate = new Date(to);
+                    if (fromDate > toDate) {
+                        return response.error(res, '"from" date cannot be later than "to" date.', 400);
+                    }
+                }
+            }
             
             // Search functionality
             if (search) {
@@ -615,6 +651,7 @@ class UserController {
                     loginType: user.loginType,
                     image: user.image,
                     country: user.country,
+                    lastLoginAt: user.lastLoginAt,
                     phoneNumber: user.phoneNumber,
                     createdAt: user.createdAt,
                     updatedAt: user.updatedAt,
@@ -642,7 +679,7 @@ class UserController {
                 meta: {
                     totalUsers: total,
                     currentPageUsers: formattedUsers.length,
-                    filters: { role, isBanned, isSocialLogin, subscriptionStatus, search }
+                    filters: { role, isBanned, isSocialLogin, subscriptionStatus, search, from, to }
                 }
             };
 
@@ -650,7 +687,7 @@ class UserController {
                 adminId: req.user.id, 
                 totalUsers: total, 
                 page: parseInt(page),
-                filters: { role, isBanned, isSocialLogin, subscriptionStatus, search }
+                filters: { role, isBanned, isSocialLogin, subscriptionStatus, search, from, to }
             });
 
             return response.success(res, response_data, 'Users retrieved successfully');

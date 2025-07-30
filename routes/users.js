@@ -369,6 +369,20 @@ router.post('/set-password', auth, validation.user.setPassword, userController.s
  *           enum: [asc, desc]
  *           default: desc
  *         description: Sort order
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2025-01-01"
+ *         description: Filter users created from this date (YYYY-MM-DD format)
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2025-07-30"
+ *         description: Filter users created up to this date (YYYY-MM-DD format)
  *     responses:
  *       200:
  *         description: Users retrieved successfully
