@@ -12,7 +12,7 @@ import { response } from './utils/index.js';
 import { auth, adminAuth, upload, validate } from './middleware/index.js';
 import schemas from './schemas/index.js';
 import apiRouter from './routes/index.js';
-import { rssQueueService, aiSummaryQueueService } from './services/index.js';
+import { rssQueueService, aiSummaryQueueService, trialService } from './services/index.js';
 
 const validation = validate(schemas);
 const { singleUpload, multiUpload } = upload;
@@ -163,6 +163,26 @@ app.listen(PORT, async () => {
         } catch (aiQueueError) {
             logger.error('AI Summary Queue Service initialization failed:', aiQueueError);
             // Continue without AI queue service if initialization fails
+        }
+        
+        // Initialize Trial Expiration Checker
+        try {
+            // Run trial expiration check immediately on startup
+            await trialService.checkAndExpireTrials();
+            
+            // Set up recurring trial expiration check (every hour)
+            setInterval(async () => {
+                try {
+                    await trialService.checkAndExpireTrials();
+                } catch (trialError) {
+                    logger.error('Trial expiration check failed:', trialError);
+                }
+            }, 60 * 60 * 1000); // 1 hour in milliseconds
+            
+            logger.info('Trial expiration checker initialized');
+        } catch (trialError) {
+            logger.error('Trial expiration checker initialization failed:', trialError);
+            // Continue without trial checker if initialization fails
         }
         
         logger.info(`Server is running on port ${PORT}`);

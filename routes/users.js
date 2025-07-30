@@ -582,6 +582,412 @@ router.patch('/admin/users/:id/toggle-ban', validation.user.adminToggleBan, ...a
 
 /**
  * @swagger
+ * /users/admin/users/bulk-delete:
+ *   delete:
+ *     summary: Bulk delete (soft delete) multiple users by setting isBanned to true (Admin only)
+ *     tags: [Admin - User Management]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userIds]
+ *             properties:
+ *               userIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 maxItems: 100
+ *                 description: Array of user IDs to delete (UUID format)
+ *                 example: ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"]
+ *               reason:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 500
+ *                 description: Optional reason for bulk deletion
+ *                 example: "Spam accounts cleanup"
+ *     responses:
+ *       200:
+ *         description: Bulk deletion completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully deleted 5 user(s)"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         totalRequested:
+ *                           type: integer
+ *                           example: 6
+ *                         totalFound:
+ *                           type: integer
+ *                           example: 5
+ *                         totalDeleted:
+ *                           type: integer
+ *                           example: 4
+ *                         alreadyBanned:
+ *                           type: integer
+ *                           example: 1
+ *                         adminUsersSkipped:
+ *                           type: integer
+ *                           example: 0
+ *                     deletedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           email:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                     skippedUsers:
+ *                       type: object
+ *                       properties:
+ *                         alreadyBanned:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               email:
+ *                                 type: string
+ *                               reason:
+ *                                 type: string
+ *                                 example: "Already banned"
+ *                         adminUsers:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: uuid
+ *                               email:
+ *                                 type: string
+ *                               reason:
+ *                                 type: string
+ *                                 example: "Cannot delete admin users"
+ *                     reason:
+ *                       type: string
+ *                       nullable: true
+ *       400:
+ *         description: Validation error or invalid request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "userIds array is required and cannot be empty"
+ *       403:
+ *         description: Forbidden - Admin access required or cannot delete own account
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Cannot delete your own account"
+ *       404:
+ *         description: No valid users found for the provided IDs
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/admin/users/bulk-delete', validation.user.bulkDeleteUsers, ...adminUserAuth, userController.bulkDeleteUsers);
+
+// Trial Management Routes
+
+/**
+ * @swagger
+ * /users/trial/status:
+ *   get:
+ *     summary: Get current user's trial status
+ *     tags: [Users - Trial Management]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Trial status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Trial status retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasTrialHistory:
+ *                       type: boolean
+ *                       example: true
+ *                     currentStatus:
+ *                       type: string
+ *                       enum: [active, expired, no_trial]
+ *                       example: "active"
+ *                     trialEndsAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-08-06T10:30:00.000Z"
+ *                     daysRemaining:
+ *                       type: integer
+ *                       example: 5
+ *                     subscriptionId:
+ *                       type: string
+ *                       format: uuid
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/trial/status', auth, userController.getTrialStatus);
+
+/**
+ * @swagger
+ * /users/admin/trials/check-expiration:
+ *   post:
+ *     summary: Manually check and expire trials (Admin only)
+ *     tags: [Admin - Trial Management]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Trial expiration check completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Processed 3 expired trials"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     expiredCount:
+ *                       type: integer
+ *                       example: 3
+ *                     expired:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           subscriptionId:
+ *                             type: string
+ *                             format: uuid
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                           userEmail:
+ *                             type: string
+ *                           trialEndsAt:
+ *                             type: string
+ *                             format: date-time
+ *                           expiredAt:
+ *                             type: string
+ *                             format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/admin/trials/check-expiration', ...adminUserAuth, userController.checkTrialExpiration);
+
+/**
+ * @swagger
+ * /users/admin/trials/{userId}/extend:
+ *   post:
+ *     summary: Extend a user's trial period (Admin only)
+ *     tags: [Admin - Trial Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID whose trial to extend
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [additionalDays]
+ *             properties:
+ *               additionalDays:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 30
+ *                 description: Number of days to extend the trial (1-30)
+ *                 example: 7
+ *     responses:
+ *       200:
+ *         description: Trial extended successfully
+ *       400:
+ *         description: Invalid request or trial not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/admin/trials/:userId/extend', validation.user.extendTrial, ...adminUserAuth, userController.extendUserTrial);
+
+/**
+ * @swagger
+ * /users/admin/trials/stats:
+ *   get:
+ *     summary: Get trial statistics (Admin only)
+ *     tags: [Admin - Trial Management]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Trial statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     activeTrials:
+ *                       type: integer
+ *                       example: 25
+ *                     expiredTrials:
+ *                       type: integer
+ *                       example: 150
+ *                     totalTrialsCreated:
+ *                       type: integer
+ *                       example: 200
+ *                     convertedUsers:
+ *                       type: integer
+ *                       example: 45
+ *                     conversionRate:
+ *                       type: string
+ *                       example: "22.50%"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/trials/stats', ...adminUserAuth, userController.getTrialStats);
+
+/**
+ * @swagger
+ * /users/admin/trials/expiring:
+ *   get:
+ *     summary: Get trials expiring soon (Admin only)
+ *     tags: [Admin - Trial Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 7
+ *           default: 1
+ *         description: Number of days ahead to check for expiring trials
+ *     responses:
+ *       200:
+ *         description: Expiring trials retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     trials:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           subscriptionId:
+ *                             type: string
+ *                             format: uuid
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                           userEmail:
+ *                             type: string
+ *                           userName:
+ *                             type: string
+ *                           trialEndsAt:
+ *                             type: string
+ *                             format: date-time
+ *                           daysRemaining:
+ *                             type: integer
+ *                     count:
+ *                       type: integer
+ *                       example: 8
+ *                     daysAhead:
+ *                       type: integer
+ *                       example: 1
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/trials/expiring', createQueryValidator(userSchema.user.getTrialsExpiring), ...adminUserAuth, userController.getTrialsExpiringSoon);
+
+/**
+ * @swagger
  * /users/admin/stats:
  *   get:
  *     summary: Get comprehensive user statistics dashboard (Admin only)

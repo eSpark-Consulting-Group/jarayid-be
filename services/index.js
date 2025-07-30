@@ -8,6 +8,7 @@ import webScraperService from './webScraperService.js';
 import aiSummaryService from './aiSummaryService.js';
 import aiSummaryQueueService from './aiSummaryQueueService.js';
 import viewTrackingService from './viewTrackingService.js';
+import trialService from './trialService.js';
 
 export {
     cloudinaryService,
@@ -19,7 +20,8 @@ export {
     webScraperService,
     aiSummaryService,
     aiSummaryQueueService,
-    viewTrackingService
+    viewTrackingService,
+    trialService
 };
 
 export default {
@@ -32,5 +34,6 @@ export default {
     webScraperService,
     aiSummaryService,
     aiSummaryQueueService,
-    viewTrackingService
+    viewTrackingService,
+    trialService
 };

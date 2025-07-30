@@ -206,6 +206,60 @@ const userSchema = {
             .valid('7d', '30d', '90d', 'all')
             .default('30d')
             .messages(messages)
+    }),
+
+    bulkDeleteUsers: Joi.object({
+        userIds: Joi.array()
+            .items(
+                Joi.string()
+                    .guid({ version: ['uuidv4'] })
+                    .required()
+                    .messages({
+                        'string.guid': 'Each user ID must be a valid UUID',
+                        'any.required': 'User ID is required'
+                    })
+            )
+            .min(1)
+            .max(100)
+            .required()
+            .messages({
+                'array.min': 'At least one user ID is required',
+                'array.max': 'Cannot delete more than 100 users at once',
+                'any.required': 'User IDs array is required'
+            }),
+        reason: Joi.string()
+            .min(3)
+            .max(500)
+            .optional()
+            .messages({
+                'string.min': 'Reason must be at least 3 characters long',
+                'string.max': 'Reason cannot exceed 500 characters'
+            })
+    }),
+
+    extendTrial: Joi.object({
+        additionalDays: Joi.number()
+            .integer()
+            .min(1)
+            .max(30)
+            .required()
+            .messages({
+                'number.min': 'Additional days must be at least 1',
+                'number.max': 'Additional days cannot exceed 30',
+                'any.required': 'Additional days is required'
+            })
+    }),
+
+    getTrialsExpiring: Joi.object({
+        days: Joi.number()
+            .integer()
+            .min(1)
+            .max(7)
+            .default(1)
+            .messages({
+                'number.min': 'Days must be at least 1',
+                'number.max': 'Days cannot exceed 7'
+            })
     })
 };
 

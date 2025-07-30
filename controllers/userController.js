@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 
 import { response, generateToken,generateHashedPassword } from '../utils/index.js';
-import { cloudinaryService, emailService, passwordResetService } from '../services/index.js';
+import { cloudinaryService, emailService, passwordResetService, trialService } from '../services/index.js';
 import winston from 'winston';
 import prisma from '../prisma/index.js';
 
@@ -115,8 +115,46 @@ class UserController {
                 }
             });
 
+            // Create a 7-day free trial subscription for new users
+            const trialEndDate = new Date();
+            trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 days from now
+
+            const subscription = await prisma.subscription.create({
+                data: {
+                    userId: user.id,
+                    isPremium: false,
+                    status: 'TRIALING',
+                    trialEndsAt: trialEndDate,
+                    currentPeriodStart: new Date(),
+                    currentPeriodEnd: trialEndDate,
+                    metadata: {
+                        trialType: 'signup_trial',
+                        trialDuration: '7_days',
+                        autoCreated: true
+                    }
+                }
+            });
+
+            logger.info('Free trial created for new user', {
+                userId: user.id,
+                userEmail: user.email,
+                trialEndsAt: trialEndDate,
+                subscriptionId: subscription.id
+            });
+
             const token = generateToken({ userId: user.id, email: user.email });
-            return response.success(res, { user, token }, 'User registered successfully');
+            
+            // Include trial information in the response
+            const userResponse = {
+                ...user,
+                subscription: {
+                    status: 'trial',
+                    trialEndsAt: trialEndDate,
+                    daysRemaining: 7
+                }
+            };
+
+            return response.success(res, { user: userResponse, token }, 'User registered successfully with 7-day free trial');
         } catch (error) {
             logger.error('Signup error:', { error: error?.message || error });
             return response.error(res, 'Signup failed', 500, error.message);
@@ -949,7 +987,7 @@ class UserController {
 
             const [
                 totalUsers,
-                activeUsers,
+                nonBannedUsers,
                 bannedUsers,
                 adminUsers,
                 socialLoginUsers,
@@ -957,12 +995,16 @@ class UserController {
                 trialUsers,
                 newUsersInPeriod,
                 usersByCountry,
-                subscriptionStats
+                subscriptionStats,
+                totalArticleViews,
+                guestViews,
+                registeredUserViews,
+                activeViewers
             ] = await Promise.all([
                 // Total users
                 prisma.user.count(),
                 
-                // Active users (not banned)
+                // Non-banned users
                 prisma.user.count({ where: { isBanned: false } }),
                 
                 // Banned users
@@ -974,19 +1016,21 @@ class UserController {
                 // Social login users
                 prisma.user.count({ where: { isSocialLogin: true } }),
                 
-                // Premium users
+                // Premium users (active subscriptions)
                 prisma.subscription.count({ 
                     where: { 
                         isPremium: true,
+                        status: 'ACTIVE',
                         user: { isBanned: false }
                     } 
                 }),
                 
-                // Trial users
+                // Trial users (active trials)
                 prisma.subscription.count({ 
                     where: { 
                         isPremium: false,
                         trialEndsAt: { gt: new Date() },
+                        status: 'TRIALING',
                         user: { isBanned: false }
                     } 
                 }),
@@ -1014,6 +1058,37 @@ class UserController {
                     _count: { isPremium: true },
                     where: {
                         user: { isBanned: false }
+                    }
+                }),
+
+                // Total article views (all time or filtered by period)
+                prisma.articleView.count({
+                    where: period !== 'all' ? { viewedAt: dateFilter } : {}
+                }),
+
+                // Guest views (views without userId - anonymous users)
+                prisma.articleView.count({
+                    where: {
+                        userId: null,
+                        ...(period !== 'all' ? { viewedAt: dateFilter } : {})
+                    }
+                }),
+
+                // Registered user views
+                prisma.articleView.count({
+                    where: {
+                        userId: { not: null },
+                        ...(period !== 'all' ? { viewedAt: dateFilter } : {})
+                    }
+                }),
+
+                // Active users (users who have viewed articles in the period)
+                prisma.user.count({
+                    where: {
+                        isBanned: false,
+                        articleViews: {
+                            some: period !== 'all' ? { viewedAt: dateFilter } : {}
+                        }
                     }
                 })
             ]);
@@ -1050,13 +1125,19 @@ class UserController {
                 take: 10
             });
 
-            const freeUsers = totalUsers - premiumUsers - trialUsers;
+            const freeUsers = nonBannedUsers - premiumUsers - trialUsers;
+            
+            // Calculate percentages
+            const premiumPercentage = totalUsers > 0 ? ((premiumUsers / totalUsers) * 100).toFixed(2) : 0;
+            const activeUsersPercentage = totalUsers > 0 ? ((activeViewers / totalUsers) * 100).toFixed(2) : 0;
+            const guestViewsPercentage = totalArticleViews > 0 ? ((guestViews / totalArticleViews) * 100).toFixed(2) : 0;
+            const registeredViewsPercentage = totalArticleViews > 0 ? ((registeredUserViews / totalArticleViews) * 100).toFixed(2) : 0;
             const conversionRate = totalUsers > 0 ? ((premiumUsers / totalUsers) * 100).toFixed(2) : 0;
 
             const stats = {
                 overview: {
                     totalUsers,
-                    activeUsers,
+                    activeUsers: nonBannedUsers,
                     bannedUsers,
                     adminUsers,
                     newUsersInPeriod,
@@ -1067,7 +1148,52 @@ class UserController {
                     premium: premiumUsers,
                     trial: trialUsers,
                     free: freeUsers,
-                    premiumPercentage: totalUsers > 0 ? ((premiumUsers / totalUsers) * 100).toFixed(2) : 0
+                    premiumPercentage: `${premiumPercentage}%`,
+                    breakdown: {
+                        premiumUsers: {
+                            count: premiumUsers,
+                            percentage: `${premiumPercentage}%`
+                        },
+                        trialUsers: {
+                            count: trialUsers,
+                            percentage: totalUsers > 0 ? `${((trialUsers / totalUsers) * 100).toFixed(2)}%` : '0.00%'
+                        },
+                        freeUsers: {
+                            count: freeUsers,
+                            percentage: totalUsers > 0 ? `${((freeUsers / totalUsers) * 100).toFixed(2)}%` : '0.00%'
+                        }
+                    }
+                },
+                userEngagement: {
+                    activeViewers: {
+                        count: activeViewers,
+                        percentage: `${activeUsersPercentage}%`,
+                        description: "Users who have viewed articles in the selected period"
+                    },
+                    totalRegisteredUsers: {
+                        count: nonBannedUsers,
+                        percentage: "100.00%",
+                        description: "Active (non-banned) registered users"
+                    }
+                },
+                articleViews: {
+                    total: totalArticleViews,
+                    guestViews: {
+                        count: guestViews,
+                        percentage: `${guestViewsPercentage}%`,
+                        description: "Views from anonymous/guest users"
+                    },
+                    registeredUserViews: {
+                        count: registeredUserViews,
+                        percentage: `${registeredViewsPercentage}%`,
+                        description: "Views from registered users"
+                    },
+                    breakdown: {
+                        guest: guestViews,
+                        registered: registeredUserViews,
+                        guestPercentage: `${guestViewsPercentage}%`,
+                        registeredPercentage: `${registeredViewsPercentage}%`
+                    }
                 },
                 geography: usersByCountry.map(item => ({
                     country: item.country || 'Unknown',
@@ -1090,7 +1216,19 @@ class UserController {
                         }
                     }))
                 },
-                period
+                period,
+                summary: {
+                    totalUsers,
+                    premiumUsers,
+                    activeViewers,
+                    totalViews: totalArticleViews,
+                    guestViews,
+                    keyMetrics: {
+                        premiumConversion: `${premiumPercentage}%`,
+                        userEngagement: `${activeUsersPercentage}%`,
+                        guestTraffic: `${guestViewsPercentage}%`
+                    }
+                }
             };
 
             logger.info('User statistics retrieved', { 
@@ -1104,6 +1242,284 @@ class UserController {
         } catch (error) {
             logger.error('Get user stats error:', { error: error.message, adminId: req.user?.id });
             return response.error(res, 'Failed to retrieve user statistics', 500, error.message);
+        }
+    }
+
+    /**
+     * Bulk delete (soft delete) users by setting isBanned to true (Admin only)
+     * DELETE /api/users/admin/users/bulk-delete
+     */
+    async bulkDeleteUsers(req, res) {
+        try {
+            const { userIds, reason } = req.body;
+
+            // Validation
+            if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+                return response.error(res, 'userIds array is required and cannot be empty', 400);
+            }
+
+            if (userIds.length > 100) {
+                return response.error(res, 'Cannot delete more than 100 users at once', 400);
+            }
+
+            // Validate all userIds are valid UUIDs
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            for (const userId of userIds) {
+                if (!uuidRegex.test(userId)) {
+                    return response.error(res, `Invalid user ID format: ${userId}`, 400);
+                }
+            }
+
+            // Prevent self-deletion
+            if (userIds.includes(req.user.id)) {
+                return response.error(res, 'Cannot delete your own account', 403);
+            }
+
+            // Get users to be deleted for validation and logging
+            const usersToDelete = await prisma.user.findMany({
+                where: {
+                    id: { in: userIds }
+                },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    role: true,
+                    isBanned: true
+                }
+            });
+
+            if (usersToDelete.length === 0) {
+                return response.error(res, 'No valid users found for the provided IDs', 404);
+            }
+
+            // Check if any users are admins
+            const adminUsers = usersToDelete.filter(user => user.role === 'ADMIN');
+            if (adminUsers.length > 0) {
+                return response.error(res, 
+                    `Cannot delete admin users: ${adminUsers.map(u => u.email).join(', ')}`, 
+                    403
+                );
+            }
+
+            // Check which users are already banned
+            const alreadyBanned = usersToDelete.filter(user => user.isBanned);
+            const usersToUpdate = usersToDelete.filter(user => !user.isBanned);
+
+            let updatedCount = 0;
+            if (usersToUpdate.length > 0) {
+                // Perform bulk soft delete (set isBanned = true)
+                const updateResult = await prisma.user.updateMany({
+                    where: {
+                        id: { in: usersToUpdate.map(u => u.id) },
+                        isBanned: false // Only update users that aren't already banned
+                    },
+                    data: {
+                        isBanned: true,
+                        updatedAt: new Date()
+                    }
+                });
+
+                updatedCount = updateResult.count;
+            }
+
+            // Log the bulk deletion action
+            logger.info('Bulk user deletion performed', {
+                adminId: req.user.id,
+                adminEmail: req.user.email,
+                totalRequested: userIds.length,
+                totalFound: usersToDelete.length,
+                totalUpdated: updatedCount,
+                alreadyBanned: alreadyBanned.length,
+                adminUsersSkipped: adminUsers.length,
+                reason: reason || 'No reason provided',
+                deletedUsers: usersToUpdate.map(u => ({
+                    id: u.id,
+                    email: u.email
+                }))
+            });
+
+            // Prepare response data
+            const responseData = {
+                summary: {
+                    totalRequested: userIds.length,
+                    totalFound: usersToDelete.length,
+                    totalDeleted: updatedCount,
+                    alreadyBanned: alreadyBanned.length,
+                    adminUsersSkipped: adminUsers.length
+                },
+                deletedUsers: usersToUpdate.map(user => ({
+                    id: user.id,
+                    email: user.email,
+                    name: user.name
+                })),
+                skippedUsers: {
+                    alreadyBanned: alreadyBanned.map(user => ({
+                        id: user.id,
+                        email: user.email,
+                        reason: 'Already banned'
+                    })),
+                    adminUsers: adminUsers.map(user => ({
+                        id: user.id,
+                        email: user.email,
+                        reason: 'Cannot delete admin users'
+                    }))
+                },
+                reason: reason || null
+            };
+
+            // Send notification emails (optional)
+            try {
+                for (const user of usersToUpdate) {
+                    // Here you could send ban notification emails
+                    // await emailService.sendBulkBanNotificationEmail(user.email, reason);
+                }
+            } catch (emailError) {
+                logger.error('Failed to send bulk ban notification emails:', { 
+                    error: emailError.message 
+                });
+            }
+
+            const message = updatedCount > 0 
+                ? `Successfully deleted ${updatedCount} user(s)`
+                : 'No users were deleted (all were already banned or are admin users)';
+
+            return response.success(res, responseData, message);
+
+        } catch (error) {
+            logger.error('Bulk delete users error:', { 
+                error: error.message, 
+                adminId: req.user?.id,
+                requestBody: req.body
+            });
+            return response.error(res, 'Failed to delete users', 500, error.message);
+        }
+    }
+
+    /**
+     * Get trial status for current user
+     * GET /api/users/trial/status
+     */
+    async getTrialStatus(req, res) {
+        try {
+            const userId = req.user.id;
+            const trialStatus = await trialService.getUserTrialStatus(userId);
+
+            return response.success(res, trialStatus, 'Trial status retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get trial status error:', { 
+                error: error.message, 
+                userId: req.user?.id 
+            });
+            return response.error(res, 'Failed to retrieve trial status', 500, error.message);
+        }
+    }
+
+    /**
+     * Admin: Check and expire trials manually
+     * POST /api/users/admin/trials/check-expiration
+     */
+    async checkTrialExpiration(req, res) {
+        try {
+            const result = await trialService.checkAndExpireTrials();
+
+            logger.info('Manual trial expiration check performed', {
+                adminId: req.user.id,
+                adminEmail: req.user.email,
+                expiredCount: result.expiredCount
+            });
+
+            return response.success(res, result, `Processed ${result.expiredCount} expired trials`);
+
+        } catch (error) {
+            logger.error('Manual trial expiration check error:', { 
+                error: error.message, 
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to check trial expiration', 500, error.message);
+        }
+    }
+
+    /**
+     * Admin: Extend user trial
+     * POST /api/users/admin/trials/:userId/extend
+     */
+    async extendUserTrial(req, res) {
+        try {
+            const { userId } = req.params;
+            const { additionalDays } = req.body;
+
+            if (!additionalDays || additionalDays < 1 || additionalDays > 30) {
+                return response.error(res, 'additionalDays must be between 1 and 30', 400);
+            }
+
+            const updatedSubscription = await trialService.extendTrial(userId, additionalDays);
+
+            logger.info('Trial extended by admin', {
+                adminId: req.user.id,
+                adminEmail: req.user.email,
+                targetUserId: userId,
+                additionalDays
+            });
+
+            return response.success(res, {
+                subscription: updatedSubscription,
+                message: `Trial extended by ${additionalDays} days`
+            }, 'Trial extended successfully');
+
+        } catch (error) {
+            logger.error('Extend trial error:', { 
+                error: error.message, 
+                adminId: req.user?.id,
+                targetUserId: req.params.userId 
+            });
+            return response.error(res, 'Failed to extend trial', 500, error.message);
+        }
+    }
+
+    /**
+     * Admin: Get trial statistics
+     * GET /api/users/admin/trials/stats
+     */
+    async getTrialStats(req, res) {
+        try {
+            const stats = await trialService.getTrialStats();
+
+            return response.success(res, stats, 'Trial statistics retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get trial stats error:', { 
+                error: error.message, 
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to retrieve trial statistics', 500, error.message);
+        }
+    }
+
+    /**
+     * Admin: Get trials expiring soon
+     * GET /api/users/admin/trials/expiring
+     */
+    async getTrialsExpiringSoon(req, res) {
+        try {
+            const { days = 1 } = req.query;
+            const daysAhead = Math.min(Math.max(parseInt(days), 1), 7); // Between 1-7 days
+
+            const expiringSoon = await trialService.getTrialsExpiringSoon(daysAhead);
+
+            return response.success(res, {
+                trials: expiringSoon,
+                count: expiringSoon.length,
+                daysAhead
+            }, `Found ${expiringSoon.length} trials expiring in ${daysAhead} day(s)`);
+
+        } catch (error) {
+            logger.error('Get trials expiring soon error:', { 
+                error: error.message, 
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to retrieve expiring trials', 500, error.message);
         }
     }
 }
