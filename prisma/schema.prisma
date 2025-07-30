@@ -36,7 +36,6 @@ model User {
   readLater            ReadLater[]
   subscriptions        Subscription[]
   youtubeContents      YouTubeContent[]
-  isDeleted            Boolean?          @default(false)
  
   @@map("users")
 }
