@@ -12,9 +12,8 @@ import staticPagesRouter from './staticPages.js';
 import contactUsRoutes from "./contact.js";
 import externalLinkRoutes from './externalLinks.js';
 import cookiesRouter from './cookies.js';
-
+import visualAdPlacementRoutes from './visualAdPlacements.js';
 import sponsorAccountRoutes from './sponsorAccount.js';
-
 import subscriptionsRouter from './subscriptions.js';
 
 
@@ -56,5 +55,7 @@ router.use("/contact-us", contactUsRoutes);
 router.use('/sponsor-accounts', sponsorAccountRoutes);
 
 router.use('/external-links', externalLinkRoutes);
+// Visual Ad Placements related routes
+router.use('/visual-ad-placements', visualAdPlacementRoutes);
 
 export default router;

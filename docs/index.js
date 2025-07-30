@@ -12,6 +12,8 @@ export const schemaPaths = [
     './docs/sponsorAccountSchemas.js',
     './docs/externalLinkSchemas.js',
     './docs/cookieSchemas.js',
+    './docs/visualAdPlacementSchemas.js',
+
 ];
 
 export const routePaths = [

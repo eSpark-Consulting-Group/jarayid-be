@@ -11,6 +11,8 @@ import ContactController from './contactController.js';
 import SponsorAccountController from './sponsorAccountController.js';
 import ExternalLinkController from './externalLinkController.js';
 import CookieController from './cookieController.js';
+import VisualAdPlacementController from './visualAdPlacementController.js';
+
 
 export { 
     UserController, 
@@ -24,6 +26,8 @@ export {
     ContactController,
     SponsorAccountController,
     ExternalLinkController,
-    CookieController
+    CookieController,
+    VisualAdPlacementController
+
 };
 export default UserController;

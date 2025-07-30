@@ -36,6 +36,7 @@ model User {
   readLater            ReadLater[]
   subscriptions        Subscription[]
   youtubeContents      YouTubeContent[]
+  isDeleted            Boolean?          @default(false)
  
   @@map("users")
 }
@@ -140,7 +141,7 @@ model Contact {
  
   @@map("contacts")
 }
-
+ 
 model SponsorAccount {
   id            String   @id @default(uuid())
   name          String   @db.VarChar(200)
@@ -161,7 +162,7 @@ enum SponsorStatus {
   ACTIVE
   INACTIVE
 }
-
+ 
 model StaticPage {
   id        String   @id @default(uuid())
   title     String   @unique
@@ -200,7 +201,7 @@ model Subscription {
   userId                String
   isPremium             Boolean              @default(false)
   trialEndsAt           DateTime?
-
+ 
   // Paddle Integration Fields
   paddleSubscriptionId  String?              @unique @db.VarChar(255)
   paddleCustomerId      String?              @db.VarChar(255)
@@ -212,24 +213,24 @@ model Subscription {
   cancelledAt           DateTime?
   pausedAt              DateTime?
   resumedAt             DateTime?
-
+ 
   // Payment Information
   currency              String?              @db.VarChar(3)
   amount                Float?
   interval              SubscriptionInterval?
-
+ 
   // Metadata
   metadata              Json?
   lastPaymentAt         DateTime?
   nextPaymentAt         DateTime?
   failedPaymentCount    Int                  @default(0)
-
-  
+ 
+ 
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   user                  User                 @relation(fields: [userId], references: [id])
-  
-
+ 
+ 
   @@unique([userId], name: "unique_user_subscription")
   @@map("subscriptions")
 }
@@ -282,7 +283,7 @@ model ArticleView {
   @@unique([articleId, ipAddress], name: "unique_ip_article_view")
   @@map("article_views")
 }
-
+ 
 model ExternalLink {
   id               String   @id @default(uuid())
   toolName         String   @db.VarChar(255)
@@ -329,7 +330,7 @@ enum YouTubeContentType {
   SHORTS
   FULL_VIDEO
 }
-
+ 
 enum SubscriptionStatus {
   ACTIVE
   INACTIVE
@@ -351,12 +352,12 @@ model Cookie {
   description String?    @db.Text
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-
   @@map("cookies")
 }
 
+ 
 model VisualAdPlacement {
-  id           String    @id @default(cuid())
+  id           String    @id @default(uuid())
   platform     Platform
   pageType     PageType
   positionName String
@@ -389,6 +390,5 @@ enum SubscriptionInterval {
   MONTHLY
   YEARLY
   WEEKLY
-
+ 
 }
-
