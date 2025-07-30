@@ -21,6 +21,7 @@ model User {
   imageKey             String?          @db.VarChar(500)
   lastLoginAt          DateTime?
   country              String?          @db.VarChar(100)
+  isDeleted            Boolean?          @default(false)
   phoneNumber          String?          @db.VarChar(20)
   resetPasswordToken   String?          @db.VarChar(500)
   resetPasswordExpires DateTime?
@@ -339,7 +340,7 @@ enum SubscriptionStatus {
   TRIALING
   EXPIRED
 }
- 
+
 model Cookie {
   id          String     @id @default(uuid())
   name        String     @unique @db.VarChar(100)
@@ -351,9 +352,9 @@ model Cookie {
   description String?    @db.Text
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
- 
   @@map("cookies")
 }
+
  
 model VisualAdPlacement {
   id           String    @id @default(uuid())
@@ -376,7 +377,7 @@ enum PageType {
   ARTICLE_PAGE
   CATEGORY
 }
- 
+
 enum CookieCategory {
   ESSENTIAL
   FUNCTIONAL
@@ -384,7 +385,7 @@ enum CookieCategory {
   MARKETING
   PREFERENCES
 }
- 
+
 enum SubscriptionInterval {
   MONTHLY
   YEARLY

@@ -9,6 +9,7 @@ import contactUsSchema from './contact.js';
 import externalLinkSchema from './externalLink.js';
 import sponsorAccountSchema from './sponsorAccount.js';
 import subscriptionSchema from './subscription.js';
+import cookieSchema from './cookie.js';
 import visualAdPlacementSchema from './visualAdPlacement.js';
 
 
@@ -24,5 +25,6 @@ export default {
     sponsorAccount: sponsorAccountSchema,
     externalLink: externalLinkSchema,
     subscription: subscriptionSchema,
+    cookie: cookieSchema,
     visualAdPlacement: visualAdPlacementSchema
 };

@@ -179,12 +179,19 @@ class UserController {
                     role: true,
                     country: true,
                     phoneNumber: true,
+                    isDeleted: true,
                     createdAt: true,
                     updatedAt: true
                 }
             });
+            
             if (!user) {
                 return response.error(res, 'Invalid credentials', 401);
+            }
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             if (loginType === 'local') {
@@ -205,8 +212,8 @@ class UserController {
                 where: { id: user.id },
                 data: { lastLoginAt: new Date() }
             });
-            // Remove password from response
-            const { password: _, ...userResponse } = user;
+            // Remove password and isDeleted from response
+            const { password: _, isDeleted: __, ...userResponse } = user;
             const token = generateToken({ userId: user.id, email: user.email });
             return response.success(res, { user: userResponse, token }, 'Logged in successfully');
         } catch (error) {
@@ -229,14 +236,24 @@ class UserController {
                     country: true,
                     phoneNumber: true,
                     loginType: true,
+                    isDeleted: true,
                     createdAt: true,
                     updatedAt: true
                 }
             });
+            
             if (!user) {
                 return response.notFound(res, 'User not found');
             }
-            return response.success(res, { user }, 'Profile fetched successfully');
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
+            }
+
+            // Remove isDeleted from response
+            const { isDeleted: _, ...userResponse } = user;
+            return response.success(res, { user: userResponse }, 'Profile fetched successfully');
         } catch (error) {
             logger.error('Get profile error:', { error: error?.message || error });
             return response.error(res, 'Failed to fetch profile', 500, error.message);
@@ -254,9 +271,18 @@ class UserController {
             return response.error(res, 'No valid fields provided for update', 400);
         }
         try {
-            const existingUser = await prisma.user.findUnique({ where: { id } });
+            const existingUser = await prisma.user.findUnique({ 
+                where: { id },
+                select: { id: true, imageKey: true, isDeleted: true }
+            });
+            
             if (!existingUser) {
                 return response.notFound(res, 'User not found');
+            }
+
+            // Check if user account is deleted
+            if (existingUser.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             if (req.file) {
@@ -296,9 +322,25 @@ class UserController {
         const { email } = req.body;
 
         try {
-            const user = await prisma.user.findUnique({ where: { email } });
+            const user = await prisma.user.findUnique({ 
+                where: { email },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    isSocialLogin: true,
+                    password: true,
+                    isDeleted: true
+                }
+            });
+            
             if (!user) {
                 return response.success(res, null, 'If this email is registered, you will receive a password reset link');
+            }
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             if (user.isSocialLogin && !user.password) {
@@ -350,11 +392,17 @@ class UserController {
                     email: true,
                     resetPasswordToken: true,
                     resetPasswordExpires: true,
+                    isDeleted: true,
                 },
             });
 
             if (!user) {
                 return response.error(res, 'Invalid reset token', 400);
+            }
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             if (user.resetPasswordToken !== resetToken) {
@@ -394,11 +442,17 @@ class UserController {
                     email: true,
                     resetPasswordToken: true,
                     resetPasswordExpires: true,
+                    isDeleted: true,
                 },
             });
 
             if (!user) {
                 return response.error(res, 'Invalid reset token', 400);
+            }
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             if (user.resetPasswordToken !== resetToken) {
@@ -465,11 +519,17 @@ class UserController {
                     password: true,
                     isSocialLogin: true,
                     name: true,
+                    isDeleted: true,
                 },
             });
 
             if (!user) {
                 return response.notFound(res, 'User not found');
+            }
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             if (user.isSocialLogin && !user.password) {
@@ -533,7 +593,9 @@ class UserController {
             } = req.query;
 
             // Build where conditions
-            const where = {};
+            const where = {
+                isDeleted: false // Exclude deleted users
+            };
 
             // Date range filtering based on createdAt
             if (from || to) {
@@ -745,7 +807,10 @@ class UserController {
             const { id } = req.params;
 
             const user = await prisma.user.findUnique({
-                where: { id },
+                where: { 
+                    id,
+                    isDeleted: false // Only find non-deleted users
+                },
                 include: {
                     subscriptions: {
                         orderBy: { createdAt: 'desc' }
@@ -890,12 +955,15 @@ class UserController {
             const { reason } = req.body;
 
             const user = await prisma.user.findUnique({
-                where: { id },
+                where: { 
+                    id,
+                    isDeleted: false // Only find non-deleted users for ban toggle
+                },
                 select: { id: true, email: true, name: true, isBanned: true, role: true }
             });
 
             if (!user) {
-                return response.notFound(res, 'User not found');
+                return response.notFound(res, 'User not found or account is deleted');
             }
 
             // Prevent banning other admins
@@ -1001,63 +1069,67 @@ class UserController {
                 registeredUserViews,
                 activeViewers
             ] = await Promise.all([
-                // Total users
-                prisma.user.count(),
+                // Total users (excluding deleted)
+                prisma.user.count({ where: { isDeleted: false } }),
                 
-                // Non-banned users
-                prisma.user.count({ where: { isBanned: false } }),
+                // Non-banned users (excluding deleted)
+                prisma.user.count({ where: { isBanned: false, isDeleted: false } }),
                 
-                // Banned users
-                prisma.user.count({ where: { isBanned: true } }),
+                // Banned users (excluding deleted)
+                prisma.user.count({ where: { isBanned: true, isDeleted: false } }),
                 
-                // Admin users
-                prisma.user.count({ where: { role: 'ADMIN' } }),
+                // Admin users (excluding deleted)
+                prisma.user.count({ where: { role: 'ADMIN', isDeleted: false } }),
                 
-                // Social login users
-                prisma.user.count({ where: { isSocialLogin: true } }),
+                // Social login users (excluding deleted)
+                prisma.user.count({ where: { isSocialLogin: true, isDeleted: false } }),
                 
-                // Premium users (active subscriptions)
+                // Premium users (active subscriptions, excluding deleted)
                 prisma.subscription.count({ 
                     where: { 
                         isPremium: true,
                         status: 'ACTIVE',
-                        user: { isBanned: false }
+                        user: { isBanned: false, isDeleted: false }
                     } 
                 }),
                 
-                // Trial users (active trials)
+                // Trial users (active trials, excluding deleted)
                 prisma.subscription.count({ 
                     where: { 
                         isPremium: false,
                         trialEndsAt: { gt: new Date() },
                         status: 'TRIALING',
-                        user: { isBanned: false }
+                        user: { isBanned: false, isDeleted: false }
                     } 
                 }),
                 
-                // New users in period
+                // New users in period (excluding deleted)
                 prisma.user.count({
-                    where: period !== 'all' ? { createdAt: dateFilter } : {}
+                    where: period !== 'all' ? { 
+                        createdAt: dateFilter,
+                        isDeleted: false 
+                    } : { isDeleted: false }
                 }),
                 
-                // Users by country (top 10)
+                // Users by country (top 10, excluding deleted)
                 prisma.user.groupBy({
                     by: ['country'],
                     _count: { country: true },
                     where: { 
                         country: { not: null },
-                        isBanned: false
+                        isBanned: false,
+                        isDeleted: false
                     },
                     orderBy: { _count: { country: 'desc' } },
                     take: 10
                 }),
                 
-                // Subscription statistics
+                // Subscription statistics (excluding deleted users)
                 prisma.subscription.groupBy({
                     by: ['isPremium'],
                     _count: { isPremium: true },
                     where: {
-                        user: { isBanned: false }
+                        user: { isBanned: false, isDeleted: false }
                     }
                 }),
 
@@ -1082,10 +1154,11 @@ class UserController {
                     }
                 }),
 
-                // Active users (users who have viewed articles in the period)
+                // Active users (users who have viewed articles in the period, excluding deleted)
                 prisma.user.count({
                     where: {
                         isBanned: false,
+                        isDeleted: false,
                         articleViews: {
                             some: period !== 'all' ? { viewedAt: dateFilter } : {}
                         }
@@ -1093,21 +1166,25 @@ class UserController {
                 })
             ]);
 
-            // Get daily user registrations for chart
+            // Get daily user registrations for chart (excluding deleted users)
             const dailyRegistrations = await prisma.$queryRaw`
                 SELECT 
                     DATE("createdAt") as date,
                     COUNT(*) as count
                 FROM users 
                 WHERE "createdAt" >= ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)}
+                    AND "isDeleted" = false
                 GROUP BY DATE("createdAt")
                 ORDER BY date DESC
                 LIMIT 30
             `;
 
-            // Get top active users
+            // Get top active users (excluding deleted)
             const topActiveUsers = await prisma.user.findMany({
-                where: { isBanned: false },
+                where: { 
+                    isBanned: false,
+                    isDeleted: false 
+                },
                 include: {
                     _count: {
                         select: {
@@ -1246,7 +1323,7 @@ class UserController {
     }
 
     /**
-     * Bulk delete (soft delete) users by setting isBanned to true (Admin only)
+     * Bulk delete users by setting isDeleted to true (Admin only)
      * DELETE /api/users/admin/users/bulk-delete
      */
     async bulkDeleteUsers(req, res) {
@@ -1285,7 +1362,7 @@ class UserController {
                     email: true,
                     name: true,
                     role: true,
-                    isBanned: true
+                    isDeleted: true
                 }
             });
 
@@ -1302,20 +1379,20 @@ class UserController {
                 );
             }
 
-            // Check which users are already banned
-            const alreadyBanned = usersToDelete.filter(user => user.isBanned);
-            const usersToUpdate = usersToDelete.filter(user => !user.isBanned);
+            // Check which users are already deleted
+            const alreadyDeleted = usersToDelete.filter(user => user.isDeleted);
+            const usersToUpdate = usersToDelete.filter(user => !user.isDeleted);
 
             let updatedCount = 0;
             if (usersToUpdate.length > 0) {
-                // Perform bulk soft delete (set isBanned = true)
+                // Perform bulk soft delete (set isDeleted = true)
                 const updateResult = await prisma.user.updateMany({
                     where: {
                         id: { in: usersToUpdate.map(u => u.id) },
-                        isBanned: false // Only update users that aren't already banned
+                        isDeleted: false // Only update users that aren't already deleted
                     },
                     data: {
-                        isBanned: true,
+                        isDeleted: true,
                         updatedAt: new Date()
                     }
                 });
@@ -1330,7 +1407,7 @@ class UserController {
                 totalRequested: userIds.length,
                 totalFound: usersToDelete.length,
                 totalUpdated: updatedCount,
-                alreadyBanned: alreadyBanned.length,
+                alreadyDeleted: alreadyDeleted.length,
                 adminUsersSkipped: adminUsers.length,
                 reason: reason || 'No reason provided',
                 deletedUsers: usersToUpdate.map(u => ({
@@ -1345,7 +1422,7 @@ class UserController {
                     totalRequested: userIds.length,
                     totalFound: usersToDelete.length,
                     totalDeleted: updatedCount,
-                    alreadyBanned: alreadyBanned.length,
+                    alreadyDeleted: alreadyDeleted.length,
                     adminUsersSkipped: adminUsers.length
                 },
                 deletedUsers: usersToUpdate.map(user => ({
@@ -1354,10 +1431,10 @@ class UserController {
                     name: user.name
                 })),
                 skippedUsers: {
-                    alreadyBanned: alreadyBanned.map(user => ({
+                    alreadyDeleted: alreadyDeleted.map(user => ({
                         id: user.id,
                         email: user.email,
-                        reason: 'Already banned'
+                        reason: 'Already deleted'
                     })),
                     adminUsers: adminUsers.map(user => ({
                         id: user.id,
@@ -1368,21 +1445,9 @@ class UserController {
                 reason: reason || null
             };
 
-            // Send notification emails (optional)
-            try {
-                for (const user of usersToUpdate) {
-                    // Here you could send ban notification emails
-                    // await emailService.sendBulkBanNotificationEmail(user.email, reason);
-                }
-            } catch (emailError) {
-                logger.error('Failed to send bulk ban notification emails:', { 
-                    error: emailError.message 
-                });
-            }
-
             const message = updatedCount > 0 
                 ? `Successfully deleted ${updatedCount} user(s)`
-                : 'No users were deleted (all were already banned or are admin users)';
+                : 'No users were deleted (all were already deleted or are admin users)';
 
             return response.success(res, responseData, message);
 

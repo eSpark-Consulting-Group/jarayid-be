@@ -11,10 +11,9 @@ import youtubeContentRouter from './youtubeContent.js';
 import staticPagesRouter from './staticPages.js';
 import contactUsRoutes from "./contact.js";
 import externalLinkRoutes from './externalLinks.js';
+import cookiesRouter from './cookies.js';
 import visualAdPlacementRoutes from './visualAdPlacements.js';
-
 import sponsorAccountRoutes from './sponsorAccount.js';
-
 import subscriptionsRouter from './subscriptions.js';
 
 
@@ -45,6 +44,9 @@ router.use("/static-pages", staticPagesRouter);
 
 // Subscriptions related routes
 router.use('/subscriptions', subscriptionsRouter);
+
+// Cookies related routes
+router.use('/cookies', cookiesRouter);
 
 // Contact Us related routes
 router.use("/contact-us", contactUsRoutes);
