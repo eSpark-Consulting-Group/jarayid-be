@@ -15,11 +15,30 @@ const jwtGuard = async (req, res, next) => {
         try {
             const decoded = jwt.verify(token, configs.JWT_SECRET_KEY);
             const user = await prisma.user.findUnique({
-                where: { id: decoded.userId }
+                where: { id: decoded.userId },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    role: true,
+                    isBanned: true,
+                    isDeleted: true,
+                    country: true,
+                    phoneNumber: true,
+                    image: true,
+                    loginType: true,
+                    createdAt: true,
+                    updatedAt: true
+                }
             });
 
             if (!user) {
                 return response.unauthorized(res, 'User not found');
+            }
+
+            // Check if user account is deleted
+            if (user.isDeleted) {
+                return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
 
             req.user = user;

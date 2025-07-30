@@ -10,6 +10,7 @@ import StaticPageController from './staticPageController.js';
 import ContactController from './contactController.js';
 import SponsorAccountController from './sponsorAccountController.js';
 import ExternalLinkController from './externalLinkController.js';
+import CookieController from './cookieController.js';
 
 export { 
     UserController, 
@@ -22,6 +23,7 @@ export {
     StaticPageController,
     ContactController,
     SponsorAccountController,
-    ExternalLinkController
+    ExternalLinkController,
+    CookieController
 };
 export default UserController;

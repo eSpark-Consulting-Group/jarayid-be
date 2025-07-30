@@ -21,6 +21,7 @@ model User {
   imageKey             String?          @db.VarChar(500)
   lastLoginAt          DateTime?
   country              String?          @db.VarChar(100)
+  isDeleted            Boolean?          @default(false)
   phoneNumber          String?          @db.VarChar(20)
   resetPasswordToken   String?          @db.VarChar(500)
   resetPasswordExpires DateTime?
@@ -337,6 +338,51 @@ enum SubscriptionStatus {
   PAST_DUE
   TRIALING
   EXPIRED
+}
+
+model Cookie {
+  id          String     @id @default(uuid())
+  name        String     @unique @db.VarChar(100)
+  purpose     String     @db.VarChar(500)
+  duration    String     @db.VarChar(50)
+  category    CookieCategory @default(FUNCTIONAL)
+  isEssential Boolean    @default(false)
+  isEnabled   Boolean    @default(true)
+  description String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("cookies")
+}
+
+model VisualAdPlacement {
+  id           String    @id @default(cuid())
+  platform     Platform
+  pageType     PageType
+  positionName String
+  adLink       String?   // Could be ad unit ID or URL
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+ 
+enum Platform {
+  WEB
+  APP
+}
+ 
+enum PageType {
+  MAIN_PAGE
+  ARTICLE_PAGE
+  CATEGORY
+}
+
+enum CookieCategory {
+  ESSENTIAL
+  FUNCTIONAL
+  ANALYTICS
+  MARKETING
+  PREFERENCES
 }
 
 enum SubscriptionInterval {
