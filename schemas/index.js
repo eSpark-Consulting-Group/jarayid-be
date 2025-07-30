@@ -21,6 +21,6 @@ export default {
     youtubeContent: youtubeContentSchema,
     contactUs: contactUsSchema,
     sponsorAccount: sponsorAccountSchema,
-    externalLink: externalLinkSchema
+    externalLink: externalLinkSchema,
     subscription: subscriptionSchema
 };
