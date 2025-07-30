@@ -586,6 +586,7 @@ class UserController {
                 isBanned, 
                 isSocialLogin,
                 subscriptionStatus,
+                userPaidStatus, // New filter for premium/free/trial
                 sortBy = 'createdAt',
                 sortOrder = 'desc',
                 from,
@@ -703,10 +704,26 @@ class UserController {
                 prisma.user.count({ where })
             ]);
 
-            // Process subscription status filter after fetching
+            // Process user paid status filter after fetching
             let filteredUsers = users;
-            if (subscriptionStatus) {
+            if (userPaidStatus) {
                 filteredUsers = users.filter(user => {
+                    const latestSubscription = user.subscriptions[0];
+                    
+                    if (userPaidStatus === 'premium') {
+                        return latestSubscription && latestSubscription.isPremium && latestSubscription.status === 'ACTIVE';
+                    } else if (userPaidStatus === 'trial') {
+                        return latestSubscription && !latestSubscription.isPremium && latestSubscription.trialEndsAt && new Date(latestSubscription.trialEndsAt) > new Date() && latestSubscription.status === 'TRIALING';
+                    } else if (userPaidStatus === 'free') {
+                        return !latestSubscription || (!latestSubscription.isPremium && (!latestSubscription.trialEndsAt || new Date(latestSubscription.trialEndsAt) <= new Date()));
+                    }
+                    return true;
+                });
+            }
+
+            // Legacy support: Process subscription status filter if userPaidStatus is not provided
+            if (!userPaidStatus && subscriptionStatus) {
+                filteredUsers = filteredUsers.filter(user => {
                     const latestSubscription = user.subscriptions[0];
                     
                     if (subscriptionStatus === 'premium') {
@@ -779,7 +796,7 @@ class UserController {
                 meta: {
                     totalUsers: total,
                     currentPageUsers: formattedUsers.length,
-                    filters: { role, isBanned, isSocialLogin, subscriptionStatus, search, from, to }
+                    filters: { role, isBanned, isSocialLogin, subscriptionStatus, userPaidStatus, search, from, to }
                 }
             };
 
@@ -787,7 +804,7 @@ class UserController {
                 adminId: req.user.id, 
                 totalUsers: total, 
                 page: parseInt(page),
-                filters: { role, isBanned, isSocialLogin, subscriptionStatus, search, from, to }
+                filters: { role, isBanned, isSocialLogin, subscriptionStatus, userPaidStatus, search, from, to }
             });
 
             return response.success(res, response_data, 'Users retrieved successfully');

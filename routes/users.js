@@ -355,7 +355,13 @@ router.post('/set-password', auth, validation.user.setPassword, userController.s
  *         schema:
  *           type: string
  *           enum: [free, trial, premium]
- *         description: Filter by subscription status
+ *         description: Filter by subscription status (legacy parameter)
+ *       - in: query
+ *         name: userPaidStatus
+ *         schema:
+ *           type: string
+ *           enum: [free, trial, premium]
+ *         description: Filter users by their current paid status (premium=active subscribers, trial=users in trial period, free=users without active subscriptions)
  *       - in: query
  *         name: sortBy
  *         schema:
@@ -431,6 +437,35 @@ router.post('/set-password', auth, validation.user.setPassword, userController.s
  *                                 type: integer
  *                     pagination:
  *                       $ref: '#/components/schemas/Pagination'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         totalUsers:
+ *                           type: integer
+ *                           description: Total number of users in the system
+ *                         currentPageUsers:
+ *                           type: integer
+ *                           description: Number of users returned in current page
+ *                         filters:
+ *                           type: object
+ *                           properties:
+ *                             role:
+ *                               type: string
+ *                             isBanned:
+ *                               type: boolean
+ *                             isSocialLogin:
+ *                               type: boolean
+ *                             subscriptionStatus:
+ *                               type: string
+ *                             userPaidStatus:
+ *                               type: string
+ *                               description: Current filter value for user paid status
+ *                             search:
+ *                               type: string
+ *                             from:
+ *                               type: string
+ *                             to:
+ *                               type: string
  *       401:
  *         description: Unauthorized
  *       403:

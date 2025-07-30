@@ -16,13 +16,6 @@ const validation = createValidationMiddleware(schemas);
  *   get:
  *     summary: Get all enabled cookies for public display (cookie consent banner)
  *     tags: [Cookies]
- *     parameters:
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *           enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *         description: Filter by cookie category
  *     responses:
  *       200:
  *         description: List of enabled cookies
@@ -42,10 +35,8 @@ const validation = createValidationMiddleware(schemas);
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/Cookie'
- *                     total:
+ *                     totalCookies:
  *                       type: integer
- *                     categories:
- *                       type: object
  *       500:
  *         description: Server error
  */
@@ -84,13 +75,6 @@ router.get('/public', cookieController.getPublicCookies);
  *                 type: string
  *                 minLength: 1
  *                 maxLength: 50
- *               category:
- *                 type: string
- *                 enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *                 default: FUNCTIONAL
- *               isEssential:
- *                 type: boolean
- *                 default: false
  *               isEnabled:
  *                 type: boolean
  *                 default: true
@@ -141,15 +125,6 @@ router.post('/',
  *           maximum: 100
  *           default: 10
  *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *           enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *       - in: query
- *         name: isEssential
- *         schema:
- *           type: boolean
- *       - in: query
  *         name: isEnabled
  *         schema:
  *           type: boolean
@@ -162,7 +137,7 @@ router.post('/',
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [name, purpose, category, duration, createdAt, updatedAt]
+ *           enum: [name, purpose, duration, createdAt, updatedAt]
  *           default: createdAt
  *       - in: query
  *         name: sortOrder
@@ -210,16 +185,12 @@ router.get('/',
  *                 data:
  *                   type: object
  *                   properties:
- *                     total:
+ *                     totalCookies:
  *                       type: integer
- *                     enabled:
+ *                     enabledCookies:
  *                       type: integer
- *                     disabled:
+ *                     disabledCookies:
  *                       type: integer
- *                     essential:
- *                       type: integer
- *                     byCategory:
- *                       type: object
  *       401:
  *         description: Unauthorized
  *       403:
@@ -305,11 +276,6 @@ router.get('/:id',
  *                 type: string
  *                 minLength: 1
  *                 maxLength: 50
- *               category:
- *                 type: string
- *                 enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *               isEssential:
- *                 type: boolean
  *               isEnabled:
  *                 type: boolean
  *               description:
@@ -358,7 +324,7 @@ router.put('/:id',
  *       200:
  *         description: Cookie deleted successfully
  *       400:
- *         description: Invalid cookie ID or cannot delete essential cookie
+ *         description: Invalid cookie ID
  *       401:
  *         description: Unauthorized
  *       403:
@@ -394,7 +360,7 @@ router.delete('/:id',
  *       200:
  *         description: Cookie status toggled successfully
  *       400:
- *         description: Invalid cookie ID or cannot disable essential cookie
+ *         description: Invalid cookie ID
  *       401:
  *         description: Unauthorized
  *       403:
@@ -440,9 +406,6 @@ router.patch('/:id/toggle',
  *                 type: object
  *                 minProperties: 1
  *                 properties:
- *                   category:
- *                     type: string
- *                     enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
  *                   isEnabled:
  *                     type: boolean
  *                   purpose:
