@@ -291,6 +291,13 @@ model ExternalLink {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
+
+model ApiKey {
+  id        String      @id @default(uuid())
+  key       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
  
 enum Status {
   ARCHIVE

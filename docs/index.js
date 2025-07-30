@@ -13,6 +13,7 @@ export const schemaPaths = [
     './docs/externalLinkSchemas.js',
     './docs/cookieSchemas.js',
     './docs/visualAdPlacementSchemas.js',
+    './docs/openAISchemas.js',
 
 ];
 

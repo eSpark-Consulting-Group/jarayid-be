@@ -12,6 +12,7 @@ import SponsorAccountController from './sponsorAccountController.js';
 import ExternalLinkController from './externalLinkController.js';
 import CookieController from './cookieController.js';
 import VisualAdPlacementController from './visualAdPlacementController.js';
+import OpenAIKeyController from './openAIKeyController.js';
 
 
 export { 
@@ -27,7 +28,8 @@ export {
     SponsorAccountController,
     ExternalLinkController,
     CookieController,
-    VisualAdPlacementController
+    VisualAdPlacementController,
+    OpenAIKeyController
 
 };
 export default UserController;
