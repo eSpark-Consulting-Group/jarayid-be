@@ -6,9 +6,9 @@
  *       type: object
  *       properties:
  *         id:
- *           type: integer
- *           description: Unique external link ID (auto-increment)
- *           example: 1
+ *           type: string
+ *           description: Unique external link ID
+ *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         toolName:
  *           type: string
  *           description: Name of the tool or resource

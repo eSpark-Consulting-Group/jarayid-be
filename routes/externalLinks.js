@@ -104,8 +104,8 @@ router.get(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: External link numeric ID
+ *           type: string
+ *         description: External link ID
  *     responses:
  *       200:
  *         description: External link retrieved successfully
@@ -137,8 +137,8 @@ router.get(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: External link numeric ID
+ *           type: string
+ *         description: External link ID
  *     requestBody:
  *       required: true
  *       content:
@@ -153,7 +153,7 @@ router.get(
  *       200:
  *         description: External link updated successfully
  *       400:
- *         description: Validation error
+ *         description: Invalid external link ID
  *       401:
  *         description: Unauthorized
  *       403:
@@ -185,8 +185,8 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: External link numeric ID
+ *           type: string
+ *         description: External link ID
  *     responses:
  *       200:
  *         description: External link deleted successfully

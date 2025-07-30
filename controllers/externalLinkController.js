@@ -28,11 +28,11 @@ class ExternalLinkController {
 
   // Create External Link
   async createExternalLink(req, res) {
-    const { toolName, toolRedirectLink, isActive } = req.body;
+    const { toolName, toolRedirectLink, status = "ACTIVE" } = req.body;
 
     try {
       const link = await prisma.externalLink.create({
-        data: { toolName, toolRedirectLink, isActive },
+        data: { toolName, toolRedirectLink, status },
       });
 
       return response.success(
@@ -111,7 +111,7 @@ class ExternalLinkController {
 
     try {
       const link = await prisma.externalLink.findUnique({
-        where: { id: Number(id) },
+        where: { id: id },
       });
 
       if (!link) {
@@ -134,11 +134,11 @@ class ExternalLinkController {
   // Update External Link
   async updateExternalLink(req, res) {
     const { id } = req.params;
-    const { toolName, toolRedirectLink, isActive } = req.body;
+    const { toolName, toolRedirectLink, status } = req.body;
 
     try {
       const existing = await prisma.externalLink.findUnique({
-        where: { id: Number(id) },
+        where: { id: id },
       });
 
       if (!existing) {
@@ -146,8 +146,12 @@ class ExternalLinkController {
       }
 
       const updated = await prisma.externalLink.update({
-        where: { id: Number(id) },
-        data: { toolName, toolRedirectLink, isActive },
+        where: { id: id },
+        data: {
+          ...(toolName && { toolName }),
+          ...(toolRedirectLink && { toolRedirectLink }),
+          ...(status && { status }),
+        },
       });
 
       return response.success(
@@ -169,7 +173,7 @@ class ExternalLinkController {
 
     try {
       const existing = await prisma.externalLink.findUnique({
-        where: { id: Number(id) },
+        where: { id: id },
       });
 
       if (!existing) {
@@ -177,7 +181,7 @@ class ExternalLinkController {
       }
 
       await prisma.externalLink.delete({
-        where: { id: Number(id) },
+        where: { id: id },
       });
 
       return response.success(res, null, "External link deleted successfully");

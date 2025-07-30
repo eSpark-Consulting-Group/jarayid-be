@@ -26,7 +26,10 @@ const externalLinkSchema = {
       .required()
       .messages(messages),
 
-    isActive: Joi.boolean().default(true).messages(messages),
+    status: Joi.string()
+      .valid("ACTIVE", "INACTIVE")
+      .default("ACTIVE")
+      .messages(messages),
   }),
 
   // Update schema
@@ -39,7 +42,11 @@ const externalLinkSchema = {
       .optional()
       .messages(messages),
 
-    isActive: Joi.boolean().optional().messages(messages),
+    status: Joi.string()
+      .valid("ACTIVE", "INACTIVE")
+      .default("ACTIVE")
+      .optional()
+      .messages(messages),
   }),
 
   // Query parameters schema
@@ -64,8 +71,12 @@ const externalLinkSchema = {
 
   // Path parameters schema
   params: Joi.object({
-    id: Joi.number().integer().required().messages(messages),
-  }),
+      id: Joi.string().guid({ version: "uuidv4" }).required().messages({
+        "string.base": "ID must be a string",
+        "string.guid": "ID must be a valid UUID",
+        "any.required": "ID is required",
+      }),
+    }),
 };
 
 export default externalLinkSchema;
