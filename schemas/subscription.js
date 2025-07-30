@@ -11,6 +11,28 @@ const subscriptionSchema = {
             'number.integer': 'Trial days must be an integer',
             'number.min': 'Trial days cannot be negative',
             'number.max': 'Trial days cannot exceed 365'
+        }),
+        successUrl: Joi.string().uri().optional().messages({
+            'string.uri': 'Success URL must be a valid URL'
+        }),
+        failureUrl: Joi.string().uri().optional().messages({
+            'string.uri': 'Failure URL must be a valid URL'
+        })
+    }),
+
+    createWidgetCheckout: Joi.object({
+        priceId: Joi.string().required().messages({
+            'string.empty': 'Price ID is required',
+            'any.required': 'Price ID is required'
+        }),
+        trialDays: Joi.number().integer().min(0).max(365).optional().messages({
+            'number.base': 'Trial days must be a number',
+            'number.integer': 'Trial days must be an integer',
+            'number.min': 'Trial days cannot be negative',
+            'number.max': 'Trial days cannot exceed 365'
+        }),
+        checkoutType: Joi.string().valid('widget', 'redirect').default('widget').messages({
+            'any.only': 'Checkout type must be either "widget" or "redirect"'
         })
     }),
 

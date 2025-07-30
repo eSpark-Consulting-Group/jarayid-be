@@ -240,7 +240,7 @@ router.post('/checkout',
  */
 router.post('/widget-checkout', 
     auth, 
-    validation.subscription.createCheckout, 
+    validation.subscription.createWidgetCheckout, 
     subscriptionController.createWidgetCheckout
 );
 

@@ -2,7 +2,7 @@
 import winston from 'winston';
 import { response, pagination } from '../utils/index.js';
 
-
+import prisma from '../prisma/index.js';
 // Logger configuration
 const logger = winston.createLogger({
     level: 'info',
@@ -23,6 +23,9 @@ const logger = winston.createLogger({
 
 
 class YouTubeContentController {
+      constructor() {
+            this.prisma = prisma;
+        }
     /**
      * Create new YouTube content
      * POST /api/youtube-content
