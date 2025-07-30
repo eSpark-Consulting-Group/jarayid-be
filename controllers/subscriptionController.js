@@ -43,8 +43,13 @@ class SubscriptionController {
                 {
                     trialDays,
                     successUrl,
-                    failureUrl
+                    failureUrl,
+
+                },
+                {
+                    checkoutType: 'widget' // Default to widget checkout
                 }
+                
             );
 
             return successResponse(res, {
@@ -54,6 +59,62 @@ class SubscriptionController {
 
         } catch (error) {
             logger.error('Error creating checkout:', error);
+            return errorResponse(res, error.message, 500);
+        }
+    }
+
+    /**
+     * Generate widget checkout data for subscription
+     */
+    async createWidgetCheckout(req, res) {
+        try {
+            const { priceId, trialDays, checkoutType = 'widget' } = req.body;
+            const userId = req.user.id;
+
+            if (!priceId) {
+                return errorResponse(res, 'Price ID is required', 400);
+            }
+
+            // Use widget method if checkoutType is widget
+            if (checkoutType === 'widget') {
+                const widgetData = await paddleSubscriptionService.generateWidgetCheckout(
+                    priceId,
+                    {
+                        userId,
+                        email: req.user.email
+                    },
+                    {
+                        trialDays
+                    }
+                );
+
+                return successResponse(res, {
+                    ...widgetData,
+                    message: 'Widget checkout data generated successfully'
+                });
+            } else {
+                // Fallback to URL checkout with widget option
+                const checkoutResult = await paddleSubscriptionService.generateCheckoutUrl(
+                    priceId,
+                    {
+                        userId,
+                        email: req.user.email
+                    },
+                    {
+                        trialDays,
+                        checkoutType
+                    }
+                );
+
+                return successResponse(res, {
+                    checkoutUrl: checkoutResult,
+                    type: 'redirect',
+                    message: 'Checkout URL generated successfully'
+                });
+            }
+
+        } catch (error) {
+            logger.error('Error creating widget checkout:', error);
             return errorResponse(res, error.message, 500);
         }
     }

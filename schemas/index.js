@@ -9,7 +9,7 @@ import contactUsSchema from './contact.js';
 
 import sponsorAccountSchema from './sponsorAccount.js';
 
-import { subscriptionSchemas } from './subscription.js';
+import subscriptionSchema from './subscription.js';
 
 
 export default {
@@ -22,6 +22,5 @@ export default {
     youtubeContent: youtubeContentSchema,
     contactUs: contactUsSchema,
     sponsorAccount: sponsorAccountSchema,
-    subscriptionSchemas
-
+    subscription: subscriptionSchema
 };

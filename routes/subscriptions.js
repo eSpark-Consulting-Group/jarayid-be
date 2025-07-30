@@ -89,7 +89,7 @@ const validation = validate(schemas);
 
 /**
  * @swagger
- * /api/subscriptions/plans:
+ * /subscriptions/plans:
  *   get:
  *     summary: Get available subscription plans
  *     tags: [Subscriptions]
@@ -117,7 +117,7 @@ router.get('/plans', subscriptionController.getPlans);
 
 /**
  * @swagger
- * /api/subscriptions/checkout:
+ * /subscriptions/checkout:
  *   post:
  *     summary: Create checkout URL for subscription
  *     tags: [Subscriptions]
@@ -137,13 +137,10 @@ router.get('/plans', subscriptionController.getPlans);
  *                 description: Paddle price ID
  *               trialDays:
  *                 type: integer
- *                 description: Number of trial days
- *               successUrl:
- *                 type: string
- *                 description: Success redirect URL
- *               failureUrl:
- *                 type: string
- *                 description: Failure redirect URL
+ *                 description: Number of trial days (optional)
+ *             note: |
+ *               Success and failure URLs are configured on the backend for security.
+ *               They cannot be overridden from the frontend.
  *     responses:
  *       200:
  *         description: Checkout URL created successfully
@@ -165,13 +162,91 @@ router.get('/plans', subscriptionController.getPlans);
  */
 router.post('/checkout', 
     auth, 
-    validation.subscriptionSchemas.createCheckout, 
+    validation.subscription.createCheckout, 
     subscriptionController.createCheckout
 );
 
 /**
  * @swagger
- * /api/subscriptions:
+ * /subscriptions/widget-checkout:
+ *   post:
+ *     summary: Create widget checkout data for subscription
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - priceId
+ *             properties:
+ *               priceId:
+ *                 type: string
+ *                 description: Paddle price ID
+ *                 example: "pri_01234567890"
+ *               trialDays:
+ *                 type: integer
+ *                 description: Trial period in days
+ *                 example: 7
+ *               checkoutType:
+ *                 type: string
+ *                 enum: [widget, redirect]
+ *                 description: Type of checkout (widget or redirect)
+ *                 example: "widget"
+ *     responses:
+ *       200:
+ *         description: Widget checkout data generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Widget checkout data generated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       example: "widget"
+ *                     checkoutData:
+ *                       type: object
+ *                       description: Paddle widget configuration
+ *                     customerId:
+ *                       type: string
+ *                       description: Paddle customer ID
+ *                     priceId:
+ *                       type: string
+ *                       description: Paddle price ID
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ */
+router.post('/widget-checkout', 
+    auth, 
+    validation.subscription.createCheckout, 
+    subscriptionController.createWidgetCheckout
+);
+
+/**
+ * @swagger
+ * /subscriptions:
  *   post:
  *     summary: Create subscription directly
  *     tags: [Subscriptions]
@@ -215,13 +290,13 @@ router.post('/checkout',
  */
 router.post('/', 
     auth, 
-    validation.subscriptionSchemas.createSubscription, 
+    validation.subscription.createSubscription, 
     subscriptionController.createSubscription
 );
 
 /**
  * @swagger
- * /api/subscriptions/me:
+ * /subscriptions/me:
  *   get:
  *     summary: Get current user's subscription
  *     tags: [Subscriptions]
@@ -252,7 +327,7 @@ router.get('/me', auth, subscriptionController.getUserSubscription);
 
 /**
  * @swagger
- * /api/subscriptions/{subscriptionId}/cancel:
+ * /subscriptions/{subscriptionId}/cancel:
  *   post:
  *     summary: Cancel subscription
  *     tags: [Subscriptions]
@@ -295,13 +370,14 @@ router.get('/me', auth, subscriptionController.getUserSubscription);
  */
 router.post('/:subscriptionId/cancel', 
     auth, 
-    validation.subscriptionSchemas.cancelSubscription, 
+    validation.subscription.params,
+    validation.subscription.cancelSubscription, 
     subscriptionController.cancelSubscription
 );
 
 /**
  * @swagger
- * /api/subscriptions/{subscriptionId}:
+ * /subscriptions/{subscriptionId}:
  *   put:
  *     summary: Update subscription (change plan)
  *     tags: [Subscriptions]
@@ -346,13 +422,14 @@ router.post('/:subscriptionId/cancel',
  */
 router.put('/:subscriptionId', 
     auth, 
-    validation.subscriptionSchemas.updateSubscription, 
+    validation.subscription.params,
+    validation.subscription.updateSubscription, 
     subscriptionController.updateSubscription
 );
 
 /**
  * @swagger
- * /api/subscriptions/webhook:
+ * /subscriptions/webhook:
  *   post:
  *     summary: Handle Paddle webhooks
  *     tags: [Subscriptions]

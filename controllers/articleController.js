@@ -1343,9 +1343,12 @@ class ArticleController {
                 addedToReadLaterAt: item.createdAt,
                 updatedAt: item.updatedAt
             }));
+                  const articlesWithShareLinks = articles.map(article => 
+                shareLink.addShareLinksToArticle(article)
+            );
 
             const paginatedResponse = pagination.createPaginatedResponse(
-                articles,
+                articlesWithShareLinks,
                 req.query,
                 total,
                 {

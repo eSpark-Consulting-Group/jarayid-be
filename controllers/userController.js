@@ -162,7 +162,11 @@ class UserController {
                     return response.error(res, 'Account not registered for this social provider', 400);
                 }
             }
-
+            // Update last login time
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { lastLoginAt: new Date() }
+            });
             // Remove password from response
             const { password: _, ...userResponse } = user;
             const token = generateToken({ userId: user.id, email: user.email });

@@ -19,6 +19,7 @@ model User {
   isBanned             Boolean          @default(false)
   image                String?          @db.VarChar(500)
   imageKey             String?          @db.VarChar(500)
+  lastLoginAt          DateTime?
   country              String?          @db.VarChar(100)
   phoneNumber          String?          @db.VarChar(20)
   resetPasswordToken   String?          @db.VarChar(500)
@@ -279,6 +280,14 @@ model ArticleView {
   @@unique([articleId, userId], name: "unique_user_article_view")
   @@unique([articleId, ipAddress], name: "unique_ip_article_view")
   @@map("article_views")
+}
+model ExternalLink {
+  id               String   @id @default(uuid())
+  toolName         String   @db.VarChar(255)
+  toolRedirectLink String   @db.VarChar(1024)
+  status           String   @default("ACTIVE")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
  
 enum Status {

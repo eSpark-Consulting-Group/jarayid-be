@@ -1,4 +1,4 @@
-import { paddle } from '../config/paddle.js';
+import { paddle, paddleConfig } from '../config/paddle.js';
 import prisma from '../prisma/index.js';
 import winston from 'winston';
 
@@ -29,17 +29,72 @@ class PaddleSubscriptionService {
             const customer = await paddle.customers.create({
                 email: userData.email,
                 name: userData.name?.english || userData.name?.arabic || userData.email,
-                customData: {
-                    userId: userData.id,
+                custom_data: {
+                    userId: userData.userId || userData.id,
                     country: userData.country
                 }
             });
             
-            logger.info(`Paddle customer created: ${customer.id} for user: ${userData.id}`);
-            return customer;
+            logger.info(`Paddle customer created: ${customer.data.id} for user: ${userData.userId || userData.id}`);
+            return customer.data;
         } catch (error) {
+            // If customer already exists, try to find them
+            if (error.code === 'customer_already_exists' || 
+                error.message.includes('email conflicts with customer')) {
+                logger.info(`Customer with email ${userData.email} already exists, attempting to find...`);
+                
+                // Extract customer ID from error message if available
+                const match = error.message.match(/customer of id (ctm_[a-zA-Z0-9]+)/);
+                if (match) {
+                    const customerId = match[1];
+                    logger.info(`Found customer ID in error message: ${customerId}`);
+                    try {
+                        const existingCustomer = await paddle.customers.get(customerId);
+                        logger.info(`Successfully retrieved customer: ${JSON.stringify(existingCustomer)}`);
+                        
+                        // Return the customer data directly if it's not wrapped in .data
+                        if (existingCustomer.id) {
+                            return existingCustomer;
+                        } else if (existingCustomer.data && existingCustomer.data.id) {
+                            return existingCustomer.data;
+                        } else {
+                            logger.warn(`Unexpected customer response structure: ${JSON.stringify(existingCustomer)}`);
+                        }
+                    } catch (getError) {
+                        logger.warn(`Could not get customer by ID: ${getError.message}`);
+                    }
+                }
+                
+                // Fallback to search by email
+                return await this.findExistingCustomer(userData.email);
+            }
+            
             logger.error('Error creating Paddle customer:', error);
             throw new Error(`Failed to create customer: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find existing customer by email
+     * @param {String} email - Customer email
+     * @returns {Promise<Object>} Customer object
+     */
+    async findExistingCustomer(email) {
+        try {
+            // Get customers and find by email
+            const customers = await paddle.customers.list({
+                email: [email]
+            });
+            
+            if (customers.data && customers.data.length > 0) {
+                logger.info(`Found existing Paddle customer: ${customers.data[0].id}`);
+                return customers.data[0];
+            }
+            
+            throw new Error(`Customer with email ${email} not found`);
+        } catch (error) {
+            logger.error('Error finding existing customer:', error);
+            throw new Error(`Failed to find customer: ${error.message}`);
         }
     }
 
@@ -136,51 +191,183 @@ class PaddleSubscriptionService {
     }
 
     /**
-     * Generate checkout URL for subscription
+     * Generate checkout data for subscription (supports both URL and widget approaches)
      * @param {String} priceId - Paddle price ID
      * @param {Object} customerData - Customer information
-     * @param {Object} options - Additional options
-     * @returns {Promise<String>} Checkout URL
+     * @param {Object} options - Additional options (trialDays, checkoutType, etc.)
+     * @returns {Promise<Object>} Checkout data (URL or transaction details)
      */
     async generateCheckoutUrl(priceId, customerData, options = {}) {
         try {
-            const checkoutPayload = {
+            // First, ensure we have a customer
+            let customer = await this.findOrCreateCustomer(customerData);
+
+            const transactionPayload = {
                 items: [{
-                    priceId: priceId,
+                    price_id: priceId,
                     quantity: 1
                 }],
-                customData: {
+                customer_id: customer.paddleCustomerId,
+                collection_mode: "automatic",
+                custom_data: {
                     userId: customerData.userId
-                },
-                customer: {
-                    email: customerData.email,
-                    customData: {
-                        userId: customerData.userId
-                    }
-                },
-                settings: {
-                    successUrl: options.successUrl || `${process.env.FRONTEND_URL}/subscription/success`,
-                    failureUrl: options.failureUrl || `${process.env.FRONTEND_URL}/subscription/failed`
                 }
+                // Removed checkout.url as it needs to be approved in Paddle dashboard
+                // Paddle will use the default checkout domain instead
             };
 
-            if (options.trialDays) {
-                checkoutPayload.trialPeriod = {
-                    frequency: {
-                        type: 'day',
-                        interval: options.trialDays
-                    }
+            // Handle trial period if specified
+            if (options.trialDays && options.trialDays > 0) {
+                // For trials, we'll create a subscription directly after successful checkout
+                // Store trial info in custom_data for webhook processing
+                transactionPayload.custom_data.trialDays = options.trialDays;
+            }
+
+            const transaction = await paddle.transactions.create(transactionPayload);
+            
+            // Debug the transaction response structure
+            logger.info('Paddle: Transaction response structure:', {
+                hasData: !!transaction.data,
+                hasCheckout: !!transaction.checkout,
+                checkoutUrl: transaction.checkout?.url,
+                transactionId: transaction.id,
+                fullResponse: transaction
+            });
+            
+            // Paddle API returns transaction with checkout property directly, not under .data
+            if (!transaction.checkout || !transaction.checkout.url) {
+                logger.error('Paddle: Invalid transaction response structure:', {
+                    hasTransaction: !!transaction,
+                    hasCheckout: !!transaction?.checkout,
+                    hasUrl: !!transaction?.checkout?.url,
+                    responseKeys: transaction ? Object.keys(transaction) : []
+                });
+                throw new Error('No checkout URL returned from Paddle');
+            }
+
+            logger.info(`Checkout URL generated for user ${customerData.userId}`, {
+                transactionId: transaction.id,
+                priceId,
+                trialDays: options.trialDays,
+                checkoutUrl: transaction.checkout.url
+            });
+
+            // Return different data based on checkout type
+            if (options.checkoutType === 'widget') {
+                // For widget integration, return transaction details instead of just URL
+                return {
+                    type: 'widget',
+                    transactionId: transaction.id,
+                    checkoutUrl: transaction.checkout.url,
+                    customerId: customer.paddleCustomerId,
+                    priceId,
+                    items: transactionPayload.items,
+                    customData: transactionPayload.custom_data
                 };
             }
 
-            const checkout = await paddle.checkouts.create(checkoutPayload);
-            
-            logger.info(`Checkout URL generated for user ${customerData.userId}`);
-            return checkout.url;
+            // Default: return just the URL for redirect approach
+            return transaction.checkout.url;
 
         } catch (error) {
             logger.error('Error generating checkout URL:', error);
             throw new Error(`Failed to generate checkout URL: ${error.message}`);
+        }
+    }
+
+    /**
+     * Generate checkout data for widget integration
+     * @param {String} priceId - Paddle price ID
+     * @param {Object} customerData - Customer information
+     * @param {Object} options - Additional options (trialDays, etc.)
+     * @returns {Promise<Object>} Widget checkout data
+     */
+    async generateWidgetCheckout(priceId, customerData, options = {}) {
+        try {
+            // First, ensure we have a customer
+            let customer = await this.findOrCreateCustomer(customerData);
+
+            const checkoutData = {
+                items: [{
+                    priceId: priceId,
+                    quantity: 1
+                }],
+                customerId: customer.paddleCustomerId,
+                customData: {
+                    userId: customerData.userId
+                },
+                settings: {
+                    displayMode: 'overlay', // or 'inline'
+                    theme: 'light', // or 'dark'
+                    locale: 'en',
+                    successUrl: `${process.env.FRONTEND_URL}/payment/success`,
+                    closeUrl: `${process.env.FRONTEND_URL}/payment/cancel`
+                }
+            };
+
+            // Handle trial period if specified
+            if (options.trialDays && options.trialDays > 0) {
+                checkoutData.customData.trialDays = options.trialDays;
+            }
+
+            logger.info(`Widget checkout data generated for user ${customerData.userId}`, {
+                priceId,
+                customerId: customer.paddleCustomerId,
+                trialDays: options.trialDays
+            });
+
+            return {
+                type: 'widget',
+                checkoutData,
+                customerId: customer.paddleCustomerId,
+                priceId
+            };
+
+        } catch (error) {
+            logger.error('Error generating widget checkout:', error);
+            throw new Error(`Failed to generate widget checkout: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find existing customer or create new one
+     * @param {Object} customerData - Customer information
+     * @returns {Promise<Object>} Customer with Paddle ID
+     */
+    async findOrCreateCustomer(customerData) {
+        try {
+            // First check if user already has a subscription with Paddle customer ID
+            const existingSubscription = await prisma.subscription.findFirst({
+                where: {
+                    userId: customerData.userId,
+                    paddleCustomerId: { not: null }
+                }
+            });
+
+            if (existingSubscription && existingSubscription.paddleCustomerId) {
+                logger.info(`Using existing Paddle customer ID: ${existingSubscription.paddleCustomerId}`);
+                return {
+                    paddleCustomerId: existingSubscription.paddleCustomerId,
+                    email: customerData.email
+                };
+            }
+
+            // Create new Paddle customer or find existing one
+            const paddleCustomer = await this.createCustomer(customerData);
+            logger.info(`Customer creation result: ${JSON.stringify(paddleCustomer)}`);
+            
+            if (!paddleCustomer || !paddleCustomer.id) {
+                throw new Error(`Invalid customer data returned: ${JSON.stringify(paddleCustomer)}`);
+            }
+            
+            return {
+                paddleCustomerId: paddleCustomer.id,
+                email: customerData.email
+            };
+
+        } catch (error) {
+            logger.error('Error finding or creating customer:', error);
+            throw error;
         }
     }
 

@@ -41,6 +41,7 @@ CREATE TABLE "users" (
     "isBanned" BOOLEAN NOT NULL DEFAULT false,
     "image" VARCHAR(500),
     "imageKey" VARCHAR(500),
+    "lastLoginAt" TIMESTAMP(3),
     "country" VARCHAR(100),
     "phoneNumber" VARCHAR(20),
     "resetPasswordToken" VARCHAR(500),
@@ -260,6 +261,18 @@ CREATE TABLE "article_views" (
     "viewedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "article_views_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ExternalLink" (
+    "id" TEXT NOT NULL,
+    "toolName" VARCHAR(255) NOT NULL,
+    "toolRedirectLink" VARCHAR(1024) NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ExternalLink_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

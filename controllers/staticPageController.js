@@ -76,39 +76,53 @@ class StaticPageController {
         maxLimit: 200,
       });
 
-      const where = {};
-      if (search) {
-        where.OR = [
-          {
-            title: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            slug: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            content: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-        ];
-      }
+      let staticPages, total;
 
-      const [staticPages, total] = await Promise.all([
-        prisma.staticPage.findMany({
-          where,
-          skip,
-          take,
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.staticPage.count({ where }),
-      ]);
+      if (search) {
+        // For JSON content search, we need to use raw queries
+        const searchTerm = `%${search}%`;
+        
+        // Raw query to search in JSON content as well
+        const rawQuery = `
+          SELECT * FROM "StaticPage" 
+          WHERE 
+            LOWER(title) LIKE LOWER($1) OR 
+            LOWER(slug) LIKE LOWER($2) OR
+            LOWER(content::text) LIKE LOWER($3)
+          ORDER BY "createdAt" DESC
+          LIMIT $4 OFFSET $5
+        `;
+
+        const countQuery = `
+          SELECT COUNT(*) as count FROM "StaticPage" 
+          WHERE 
+            LOWER(title) LIKE LOWER($1) OR 
+            LOWER(slug) LIKE LOWER($2) OR
+            LOWER(content::text) LIKE LOWER($3)
+        `;
+
+        // Execute both queries
+        const [pages, countResult] = await Promise.all([
+          prisma.$queryRawUnsafe(rawQuery, searchTerm, searchTerm, searchTerm, take, skip),
+          prisma.$queryRawUnsafe(countQuery, searchTerm, searchTerm, searchTerm)
+        ]);
+
+        staticPages = pages;
+        total = parseInt(countResult[0].count);
+      } else {
+        // No search, use regular Prisma query
+        const where = {};
+        
+        [staticPages, total] = await Promise.all([
+          prisma.staticPage.findMany({
+            where,
+            skip,
+            take,
+            orderBy: { createdAt: "desc" },
+          }),
+          prisma.staticPage.count({ where }),
+        ]);
+      }
 
       const paginatedResponse = pagination.createPaginatedResponse(
         staticPages,
