@@ -599,12 +599,12 @@ class UserController {
 
             // Filter by ban status
             if (isBanned !== undefined) {
-                where.isBanned = isBanned === 'true';
+                where.isBanned = isBanned 
             }
 
             // Filter by social login
             if (isSocialLogin !== undefined) {
-                where.isSocialLogin = isSocialLogin === 'true';
+                where.isSocialLogin = isSocialLogin
             }
 
             // Build orderBy
