@@ -281,6 +281,7 @@ model ArticleView {
   @@unique([articleId, ipAddress], name: "unique_ip_article_view")
   @@map("article_views")
 }
+
 model ExternalLink {
   id               String   @id @default(uuid())
   toolName         String   @db.VarChar(255)

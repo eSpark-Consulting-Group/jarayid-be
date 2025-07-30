@@ -10,6 +10,7 @@ import aiSummaryRouter from './aiSummary.js';
 import youtubeContentRouter from './youtubeContent.js';
 import staticPagesRouter from './staticPages.js';
 import contactUsRoutes from "./contact.js";
+import externalLinkRoutes from './externalLinks.js';
 
 import sponsorAccountRoutes from './sponsorAccount.js';
 
@@ -49,5 +50,7 @@ router.use("/contact-us", contactUsRoutes);
 
 // Sponsor Account related routes
 router.use('/sponsor-accounts', sponsorAccountRoutes);
+
+router.use('/external-links', externalLinkRoutes);
 
 export default router;

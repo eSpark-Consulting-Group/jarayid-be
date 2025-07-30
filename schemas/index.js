@@ -6,9 +6,8 @@ import articleSchema from './article.js';
 import commentSchema from './comment.js';
 import youtubeContentSchema from './youtubeContent.js';
 import contactUsSchema from './contact.js';
-
+import externalLinkSchema from './externalLink.js';
 import sponsorAccountSchema from './sponsorAccount.js';
-
 import subscriptionSchema from './subscription.js';
 
 
@@ -22,5 +21,6 @@ export default {
     youtubeContent: youtubeContentSchema,
     contactUs: contactUsSchema,
     sponsorAccount: sponsorAccountSchema,
+    externalLink: externalLinkSchema
     subscription: subscriptionSchema
 };

@@ -10,6 +10,7 @@ export const schemaPaths = [
     './docs/staticPageSchemas.js',
     './docs/contactUsSchemas.js',
     './docs/sponsorAccountSchemas.js',
+    './docs/externalLinkSchemas.js',
 ];
 
 export const routePaths = [

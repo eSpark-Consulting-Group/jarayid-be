@@ -9,6 +9,7 @@ import YouTubeContentController from './youtubeContentController.js';
 import StaticPageController from './staticPageController.js';
 import ContactController from './contactController.js';
 import SponsorAccountController from './sponsorAccountController.js';
+import ExternalLinkController from './externalLinkController.js';
 
 export { 
     UserController, 
@@ -20,6 +21,7 @@ export {
     YouTubeContentController,
     StaticPageController,
     ContactController,
-    SponsorAccountController
+    SponsorAccountController,
+    ExternalLinkController
 };
 export default UserController;
