@@ -451,7 +451,7 @@ class RSSProcessor {
             // Create system user if doesn't exist
             systemUser = await prisma.user.create({
                 data: {
-                    name: { en: 'System', ar: 'النظام' },
+                    name:'System',
                     email: 'system@jarayid.com',
                     password: 'system-generated-password', // This won't be used for login
                     role: 'ADMIN',

@@ -63,6 +63,7 @@ export const generateSocialShareLinks = (articleId, title = '', description = ''
         whatsapp: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
         telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
         email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%0A%0A${encodedUrl}`,
+        tiktok: `https://www.tiktok.com/share?url=${encodedUrl}&text=${encodedTitle}`,
         copy: articleUrl // For copy to clipboard functionality
     };
 };

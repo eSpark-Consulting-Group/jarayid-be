@@ -19,6 +19,7 @@ model User {
   isBanned             Boolean          @default(false)
   image                String?          @db.VarChar(500)
   imageKey             String?          @db.VarChar(500)
+  lastLoginAt          DateTime?
   country              String?          @db.VarChar(100)
   phoneNumber          String?          @db.VarChar(20)
   resetPasswordToken   String?          @db.VarChar(500)

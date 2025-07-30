@@ -164,8 +164,35 @@ const userSchema = {
         sortOrder: Joi.string()
             .valid('asc', 'desc')
             .default('desc')
-            .messages(messages)
-    }),
+            .messages(messages),
+        from: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .messages({
+                ...messages,
+                'string.pattern.base': 'from date must be in YYYY-MM-DD format'
+            })
+            .optional(),
+        to: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .messages({
+                ...messages,
+                'string.pattern.base': 'to date must be in YYYY-MM-DD format'
+            })
+            .optional()
+    }).custom((value, helpers) => {
+        // Custom validation to ensure 'from' date is not later than 'to' date
+        if (value.from && value.to) {
+            const fromDate = new Date(value.from);
+            const toDate = new Date(value.to);
+            
+            if (fromDate > toDate) {
+                return helpers.error('custom.dateRange', { 
+                    message: '"from" date cannot be later than "to" date' 
+                });
+            }
+        }
+        return value;
+    }, 'Date range validation'),
     
     adminToggleBan: Joi.object({
         reason: Joi.string()
