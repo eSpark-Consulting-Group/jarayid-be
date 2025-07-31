@@ -12,7 +12,7 @@ const validation = createValidationMiddleware(schemas);
 // Public routes (no authentication required)
 /**
  * @swagger
- * /api/cookies/public:
+ * /cookies/public:
  *   get:
  *     summary: Get all enabled cookies for public display (cookie consent banner)
  *     tags: [Cookies]
@@ -45,7 +45,7 @@ router.get('/public', cookieController.getPublicCookies);
 // Admin routes (authentication + admin role required)
 /**
  * @swagger
- * /api/cookies:
+ * /cookies:
  *   post:
  *     summary: Create a new cookie (Admin only)
  *     tags: [Cookies]
@@ -104,7 +104,7 @@ router.post('/',
 
 /**
  * @swagger
- * /api/cookies:
+ * /cookies:
  *   get:
  *     summary: Get all cookies with filtering and pagination (Admin only)
  *     tags: [Cookies]
@@ -164,7 +164,7 @@ router.get('/',
 
 /**
  * @swagger
- * /api/cookies/stats:
+ * /cookies/stats:
  *   get:
  *     summary: Get cookie statistics (Admin only)
  *     tags: [Cookies]
@@ -206,7 +206,7 @@ router.get('/stats',
 
 /**
  * @swagger
- * /api/cookies/{id}:
+ * /cookies/{id}:
  *   get:
  *     summary: Get a specific cookie by ID (Admin only)
  *     tags: [Cookies]
@@ -242,7 +242,7 @@ router.get('/:id',
 
 /**
  * @swagger
- * /api/cookies/{id}:
+ * /cookies/{id}:
  *   put:
  *     summary: Update a specific cookie (Admin only)
  *     tags: [Cookies]
@@ -307,7 +307,7 @@ router.put('/:id',
 
 /**
  * @swagger
- * /api/cookies/{id}:
+ * /cookies/{id}:
  *   delete:
  *     summary: Delete a specific cookie (Admin only)
  *     tags: [Cookies]
@@ -343,7 +343,7 @@ router.delete('/:id',
 
 /**
  * @swagger
- * /api/cookies/{id}/toggle:
+ * /cookies/{id}/toggle:
  *   patch:
  *     summary: Toggle cookie enabled/disabled status (Admin only)
  *     tags: [Cookies]
@@ -379,7 +379,7 @@ router.patch('/:id/toggle',
 
 /**
  * @swagger
- * /api/cookies/bulk-update:
+ * /cookies/bulk-update:
  *   patch:
  *     summary: Bulk update multiple cookies (Admin only)
  *     tags: [Cookies]
