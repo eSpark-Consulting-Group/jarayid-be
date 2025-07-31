@@ -12,6 +12,7 @@ import subscriptionSchema from './subscription.js';
 import cookieSchema from './cookie.js';
 import visualAdPlacementSchema from './visualAdPlacement.js';
 import openAIKeySchema from './openAIKey.js';
+import socialMediaLinkSchema from './socialMediaLink.js';
 
 
 export default {
@@ -28,5 +29,6 @@ export default {
     subscription: subscriptionSchema,
     cookie: cookieSchema,
     visualAdPlacement: visualAdPlacementSchema,
-    apiKey: openAIKeySchema
+    apiKey: openAIKeySchema,
+    socialMediaLink: socialMediaLinkSchema
 };
