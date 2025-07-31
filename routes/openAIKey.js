@@ -49,7 +49,7 @@ router.post(
  * @swagger
  * /api-key:
  *   get:
- *     summary: Get all API key (Admin only)
+ *     summary: Get an API key (Admin only)
  *     tags: [API Key]
  *     security:
  *       - bearerAuth: []
