@@ -131,8 +131,8 @@ router.post('/', auth, adminAuth, singleUpload('logo'), validation.rssFeed.creat
  *         name: categoryId
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filter by category ID
+ *         description: Filter by category ID(s). Can be a single UUID or comma-separated UUIDs for multiple categories
+ *         example: "550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001"
  *       - in: query
  *         name: subType
  *         schema:
@@ -825,8 +825,8 @@ router.post('/queue/resume', auth, adminAuth, rssFeedController.resumeQueue);
  *         name: categoryId
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filter by category ID
+ *         description: Filter by category ID(s). Can be a single UUID or comma-separated UUIDs for multiple categories
+ *         example: "550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001"
  *       - in: query
  *         name: subType
  *         schema:

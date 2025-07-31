@@ -116,7 +116,24 @@ class RSSFeedController {
 
             const where = {};
             if (status) where.status = status;
-            if (categoryId) where.categoryId = categoryId;
+            
+            // Handle comma-separated category IDs
+            if (categoryId) {
+                if (typeof categoryId === 'string' && categoryId.includes(',')) {
+                    // Split comma-separated IDs and filter out empty strings
+                    const categoryIds = categoryId.split(',')
+                        .map(id => id.trim())
+                        .filter(id => id.length > 0);
+                    
+                    if (categoryIds.length > 0) {
+                        where.categoryId = { in: categoryIds };
+                    }
+                } else {
+                    // Single category ID (backward compatibility)
+                    where.categoryId = categoryId;
+                }
+            }
+            
             if (subType) where.subType = subType;
             if (search) {
                 where.OR = [
@@ -606,7 +623,24 @@ class RSSFeedController {
             }
 
             if (status) where.status = status;
-            if (categoryId) where.categoryId = categoryId;
+            
+            // Handle comma-separated category IDs (same logic as getAllRSSFeeds)
+            if (categoryId) {
+                if (typeof categoryId === 'string' && categoryId.includes(',')) {
+                    // Split comma-separated IDs and filter out empty strings
+                    const categoryIds = categoryId.split(',')
+                        .map(id => id.trim())
+                        .filter(id => id.length > 0);
+                    
+                    if (categoryIds.length > 0) {
+                        where.categoryId = { in: categoryIds };
+                    }
+                } else {
+                    // Single category ID (backward compatibility)
+                    where.categoryId = categoryId;
+                }
+            }
+            
             if (subType) where.subType = subType;
 
             // Date range filters

@@ -9,6 +9,26 @@ const messages = {
     'any.only': '{{#label}} must be one of {{#valids}}'
 };
 
+// Custom validation for comma-separated UUIDs
+const categoryIdValidator = Joi.string().custom((value, helpers) => {
+    if (!value) return value;
+    
+    // Split by comma and validate each ID
+    const ids = value.split(',').map(id => id.trim()).filter(id => id.length > 0);
+    
+    for (const id of ids) {
+        // UUID regex pattern
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidPattern.test(id)) {
+            return helpers.error('categoryId.invalid', { id });
+        }
+    }
+    
+    return value;
+}, 'comma-separated UUIDs validation').messages({
+    'categoryId.invalid': 'categoryId contains invalid UUID: {{#id}}. All category IDs must be valid UUIDs'
+});
+
 const rssFeedSchema = {
     create: Joi.object({
         name: Joi.string()
@@ -55,8 +75,7 @@ const rssFeedSchema = {
         status: Joi.string()
             .valid('DRAFT', 'PUBLISH', 'ARCHIVE')
             .messages(messages),
-        categoryId: Joi.string()
-            .uuid()
+        categoryId: categoryIdValidator
             .messages(messages),
         subType: Joi.string()
             .valid('SPORTS', 'ECONOMICS', 'POLITICS')
@@ -88,8 +107,7 @@ const rssFeedSchema = {
             .valid('DRAFT', 'PUBLISH', 'ARCHIVE')
             .messages(messages)
             .optional(),
-        categoryId: Joi.string()
-            .uuid()
+        categoryId: categoryIdValidator
             .messages(messages)
             .optional(),
         subType: Joi.string()
