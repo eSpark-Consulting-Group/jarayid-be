@@ -11,6 +11,7 @@ import sponsorAccountSchema from './sponsorAccount.js';
 import subscriptionSchema from './subscription.js';
 import cookieSchema from './cookie.js';
 import visualAdPlacementSchema from './visualAdPlacement.js';
+import socialMediaLinkSchema from './socialMediaLink.js';
 
 
 export default {
@@ -26,5 +27,6 @@ export default {
     externalLink: externalLinkSchema,
     subscription: subscriptionSchema,
     cookie: cookieSchema,
-    visualAdPlacement: visualAdPlacementSchema
+    visualAdPlacement: visualAdPlacementSchema,
+    socialMediaLink: socialMediaLinkSchema
 };

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import userSchema from '../schemas/index.js';
+import schemas from '../schemas/index.js';
 import createValidationMiddleware from '../middleware/validate.js';
 import UserController from '../controllers/index.js';
 import {auth, userAuth, adminUserAuth} from '../middleware/auth.js';
@@ -8,22 +8,7 @@ import { singleUpload } from '../middleware/index.js';
 
 const router = Router();
 const userController = new UserController();
-const validation = createValidationMiddleware(userSchema);
-
-// Create query validation middleware
-const createQueryValidator = (schema) => {
-    return (req, res, next) => {
-        const { error, value } = schema.validate(req.query);
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message
-            });
-        }
-        req.query = value;
-        next();
-    };
-};
+const validation = createValidationMiddleware(schemas);
 
 // routes/users.js
 /**
@@ -473,7 +458,7 @@ router.post('/set-password', auth, validation.user.setPassword, userController.s
  *       500:
  *         description: Internal server error
  */
-router.get('/admin/users', createQueryValidator(userSchema.user.adminGetUsers), ...adminUserAuth, userController.getAllUsers);
+router.get('/admin/users', validation.user.adminGetUsers, ...adminUserAuth, userController.getAllUsers);
 
 /**
  * @swagger
@@ -1019,7 +1004,7 @@ router.get('/admin/trials/stats', ...adminUserAuth, userController.getTrialStats
  *       500:
  *         description: Internal server error
  */
-router.get('/admin/trials/expiring', createQueryValidator(userSchema.user.getTrialsExpiring), ...adminUserAuth, userController.getTrialsExpiringSoon);
+router.get('/admin/trials/expiring', validation.user.getTrialsExpiring, ...adminUserAuth, userController.getTrialsExpiringSoon);
 
 /**
  * @swagger
@@ -1099,6 +1084,258 @@ router.get('/admin/trials/expiring', createQueryValidator(userSchema.user.getTri
  *       500:
  *         description: Internal server error
  */
-router.get('/admin/stats', createQueryValidator(userSchema.user.adminUserStats), ...adminUserAuth, userController.getUserStats);
+router.get('/admin/stats', validation.user.adminUserStats, ...adminUserAuth, userController.getUserStats);
+
+// Social Media Links Routes
+
+/**
+ * @swagger
+ * /users/social-media-links:
+ *   post:
+ *     summary: Create a new social media link (Admin only)
+ *     tags: [Social Media Links]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [categoryName, link, socialMedia]
+ *             properties:
+ *               categoryName:
+ *                 type: string
+ *                 maxLength: 100
+ *                 example: "Main Social"
+ *               link:
+ *                 type: string
+ *                 format: uri
+ *                 maxLength: 500
+ *                 example: "https://facebook.com/yourpage"
+ *               socialMedia:
+ *                 type: string
+ *                 enum: [FACEBOOK, TWITTER, INSTAGRAM, LINKEDIN, YOUTUBE, TIKTOK, SNAPCHAT, PINTEREST, WHATSAPP, TELEGRAM, DISCORD, REDDIT, GITHUB, WEBSITE, OTHER]
+ *                 example: "FACEBOOK"
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *     responses:
+ *       201:
+ *         description: Social media link created successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/social-media-links', 
+    validation.socialMediaLink.create,
+    ...adminUserAuth, 
+    userController.createSocialMediaLink
+);
+
+/**
+ * @swagger
+ * /users/social-media-links:
+ *   get:
+ *     summary: Get all social media links with filtering and pagination (Admin only)
+ *     tags: [Social Media Links]
+ *     parameters:
+ *       - in: query
+ *         name: categoryName
+ *         schema:
+ *           type: string
+ *           maxLength: 100
+ *         description: Filter by category name (partial match)
+ *       - in: query
+ *         name: socialMedia
+ *         schema:
+ *           type: string
+ *           enum: [FACEBOOK, TWITTER, INSTAGRAM, LINKEDIN, YOUTUBE, TIKTOK, SNAPCHAT, PINTEREST, WHATSAPP, TELEGRAM, DISCORD, REDDIT, GITHUB, WEBSITE, OTHER]
+ *         description: Filter by social media platform
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Social media links retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/social-media-links', 
+    validation.socialMediaLink.query,
+    userController.getAllSocialMediaLinks
+);
+
+/**
+ * @swagger
+ * /users/social-media-links/stats:
+ *   get:
+ *     summary: Get social media links statistics (Admin only)
+ *     tags: [Social Media Links]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Social media links statistics retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/social-media-links/stats', 
+    ...adminUserAuth, 
+    userController.getSocialMediaLinksStats
+);
+
+/**
+ * @swagger
+ * /users/social-media-links/{id}:
+ *   get:
+ *     summary: Get a social media link by ID (Admin only)
+ *     tags: [Social Media Links]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Social media link ID
+ *     responses:
+ *       200:
+ *         description: Social media link retrieved successfully
+ *       404:
+ *         description: Social media link not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/social-media-links/:id', 
+    validation.socialMediaLink.params,
+    userController.getSocialMediaLinkById
+);
+
+/**
+ * @swagger
+ * /users/social-media-links/{id}:
+ *   put:
+ *     summary: Update a social media link (Admin only)
+ *     tags: [Social Media Links]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Social media link ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               categoryName:
+ *                 type: string
+ *                 maxLength: 100
+ *               link:
+ *                 type: string
+ *                 format: uri
+ *                 maxLength: 500
+ *               socialMedia:
+ *                 type: string
+ *                 enum: [FACEBOOK, TWITTER, INSTAGRAM, LINKEDIN, YOUTUBE, TIKTOK, SNAPCHAT, PINTEREST, WHATSAPP, TELEGRAM, DISCORD, REDDIT, GITHUB, WEBSITE, OTHER]
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Social media link updated successfully
+ *       404:
+ *         description: Social media link not found
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/social-media-links/:id', 
+    validation.socialMediaLink.params,
+    validation.socialMediaLink.update,
+    ...adminUserAuth, 
+    userController.updateSocialMediaLink
+);
+
+/**
+ * @swagger
+ * /users/social-media-links/{id}:
+ *   delete:
+ *     summary: Delete a social media link (Admin only)
+ *     tags: [Social Media Links]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Social media link ID
+ *     responses:
+ *       200:
+ *         description: Social media link deleted successfully
+ *       404:
+ *         description: Social media link not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/social-media-links/:id', 
+    validation.socialMediaLink.params,
+    ...adminUserAuth, 
+    userController.deleteSocialMediaLink
+);
 
 export default router;

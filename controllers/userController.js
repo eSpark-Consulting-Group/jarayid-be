@@ -1607,6 +1607,356 @@ class UserController {
             return response.error(res, 'Failed to retrieve expiring trials', 500, error.message);
         }
     }
+
+    // Social Media Links CRUD Operations
+
+    // Create a new social media link
+    async createSocialMediaLink(req, res) {
+        const { categoryName, link, socialMedia, isActive = true } = req.body;
+
+        try {
+            logger.info('Creating social media link', { 
+                categoryName, 
+                socialMedia, 
+                adminId: req.user?.id 
+            });
+
+            // Create the social media link
+            const socialMediaLink = await prisma.socialMediaLink.create({
+                data: {
+                    categoryName: categoryName.trim(),
+                    link: link.trim(),
+                    socialMedia,
+                    isActive
+                }
+            });
+
+            logger.info('Social media link created successfully', { 
+                linkId: socialMediaLink.id,
+                categoryName: socialMediaLink.categoryName,
+                adminId: req.user?.id 
+            });
+
+            return response.success(res, socialMediaLink, 'Social media link created successfully', 201);
+
+        } catch (error) {
+            logger.error('Create social media link error:', { 
+                error: error.message, 
+                categoryName, 
+                socialMedia,
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to create social media link', 500, error.message);
+        }
+    }
+
+    // Get all social media links with filtering and pagination
+    async getAllSocialMediaLinks(req, res) {
+        const { 
+            categoryName, 
+            socialMedia, 
+            isActive, 
+            page = 1, 
+            limit = 10 
+        } = req.query;
+
+        try {
+            logger.info('Fetching social media links', { 
+                filters: { categoryName, socialMedia, isActive },
+                pagination: { page, limit },
+                adminId: req.user?.id 
+            });
+
+            // Build where clause for filtering
+            const where = {};
+            
+            if (categoryName) {
+                where.categoryName = {
+                    contains: categoryName,
+                    mode: 'insensitive'
+                };
+            }
+            
+            if (socialMedia) {
+                where.socialMedia = socialMedia;
+            }
+            
+            if (isActive !== undefined) {
+                where.isActive = isActive === 'true';
+            }
+
+            // Calculate pagination
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+            const take = parseInt(limit);
+
+            // Get total count for pagination
+            const totalCount = await prisma.socialMediaLink.count({ where });
+
+            // Fetch social media links with pagination
+            const socialMediaLinks = await prisma.socialMediaLink.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take
+            });
+
+            // Calculate pagination info
+            const totalPages = Math.ceil(totalCount / take);
+            const hasNext = page < totalPages;
+            const hasPrev = page > 1;
+
+            const paginationInfo = {
+                currentPage: parseInt(page),
+                totalPages,
+                totalCount,
+                hasNext,
+                hasPrev,
+                limit: take
+            };
+
+            logger.info('Social media links fetched successfully', { 
+                count: socialMediaLinks.length,
+                totalCount,
+                page: parseInt(page),
+                adminId: req.user?.id 
+            });
+
+            return response.success(res, {
+                socialMediaLinks,
+                pagination: paginationInfo
+            }, 'Social media links retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get social media links error:', { 
+                error: error.message, 
+                filters: { categoryName, socialMedia, isActive },
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to retrieve social media links', 500, error.message);
+        }
+    }
+
+    // Get a single social media link by ID
+    async getSocialMediaLinkById(req, res) {
+        const { id } = req.params;
+
+        try {
+            logger.info('Fetching social media link by ID', { 
+                linkId: id,
+                adminId: req.user?.id 
+            });
+
+            const socialMediaLink = await prisma.socialMediaLink.findUnique({
+                where: { id }
+            });
+
+            if (!socialMediaLink) {
+                logger.warn('Social media link not found', { 
+                    linkId: id,
+                    adminId: req.user?.id 
+                });
+                return response.error(res, 'Social media link not found', 404);
+            }
+
+            logger.info('Social media link fetched successfully', { 
+                linkId: id,
+                categoryName: socialMediaLink.categoryName,
+                adminId: req.user?.id 
+            });
+
+            return response.success(res, socialMediaLink, 'Social media link retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get social media link by ID error:', { 
+                error: error.message, 
+                linkId: id,
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to retrieve social media link', 500, error.message);
+        }
+    }
+
+    // Update a social media link
+    async updateSocialMediaLink(req, res) {
+        const { id } = req.params;
+        const { categoryName, link, socialMedia, isActive } = req.body;
+
+        try {
+            logger.info('Updating social media link', { 
+                linkId: id,
+                updates: { categoryName, socialMedia, isActive: isActive !== undefined },
+                adminId: req.user?.id 
+            });
+
+            // Check if social media link exists
+            const existingLink = await prisma.socialMediaLink.findUnique({
+                where: { id }
+            });
+
+            if (!existingLink) {
+                logger.warn('Social media link not found for update', { 
+                    linkId: id,
+                    adminId: req.user?.id 
+                });
+                return response.error(res, 'Social media link not found', 404);
+            }
+
+            // Prepare update data
+            const updateData = {};
+            
+            if (categoryName !== undefined) {
+                updateData.categoryName = categoryName.trim();
+            }
+            
+            if (link !== undefined) {
+                updateData.link = link.trim();
+            }
+            
+            if (socialMedia !== undefined) {
+                updateData.socialMedia = socialMedia;
+            }
+            
+            if (isActive !== undefined) {
+                updateData.isActive = isActive;
+            }
+
+            // Update the social media link
+            const updatedLink = await prisma.socialMediaLink.update({
+                where: { id },
+                data: updateData
+            });
+
+            logger.info('Social media link updated successfully', { 
+                linkId: id,
+                categoryName: updatedLink.categoryName,
+                adminId: req.user?.id 
+            });
+
+            return response.success(res, updatedLink, 'Social media link updated successfully');
+
+        } catch (error) {
+            logger.error('Update social media link error:', { 
+                error: error.message, 
+                linkId: id,
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to update social media link', 500, error.message);
+        }
+    }
+
+    // Delete a social media link
+    async deleteSocialMediaLink(req, res) {
+        const { id } = req.params;
+
+        try {
+            logger.info('Deleting social media link', { 
+                linkId: id,
+                adminId: req.user?.id 
+            });
+
+            // Check if social media link exists
+            const existingLink = await prisma.socialMediaLink.findUnique({
+                where: { id }
+            });
+
+            if (!existingLink) {
+                logger.warn('Social media link not found for deletion', { 
+                    linkId: id,
+                    adminId: req.user?.id 
+                });
+                return response.error(res, 'Social media link not found', 404);
+            }
+
+            // Delete the social media link
+            await prisma.socialMediaLink.delete({
+                where: { id }
+            });
+
+            logger.info('Social media link deleted successfully', { 
+                linkId: id,
+                categoryName: existingLink.categoryName,
+                adminId: req.user?.id 
+            });
+
+            return response.success(res, { id }, 'Social media link deleted successfully');
+
+        } catch (error) {
+            logger.error('Delete social media link error:', { 
+                error: error.message, 
+                linkId: id,
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to delete social media link', 500, error.message);
+        }
+    }
+
+    // Get social media links statistics
+    async getSocialMediaLinksStats(req, res) {
+        try {
+            logger.info('Fetching social media links statistics', { 
+                adminId: req.user?.id 
+            });
+
+            // Get total counts
+            const totalLinks = await prisma.socialMediaLink.count();
+            const activeLinks = await prisma.socialMediaLink.count({
+                where: { isActive: true }
+            });
+            const inactiveLinks = totalLinks - activeLinks;
+
+            // Get counts by social media platform
+            const platformStats = await prisma.socialMediaLink.groupBy({
+                by: ['socialMedia'],
+                _count: {
+                    id: true
+                },
+                orderBy: {
+                    _count: {
+                        id: 'desc'
+                    }
+                }
+            });
+
+            // Get recent links (last 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const recentLinks = await prisma.socialMediaLink.count({
+                where: {
+                    createdAt: {
+                        gte: thirtyDaysAgo
+                    }
+                }
+            });
+
+            const stats = {
+                totalLinks,
+                activeLinks,
+                inactiveLinks,
+                recentLinks,
+                platformBreakdown: platformStats.map(stat => ({
+                    platform: stat.socialMedia,
+                    count: stat._count.id
+                }))
+            };
+
+            logger.info('Social media links statistics generated', { 
+                totalLinks,
+                activeLinks,
+                platformCount: platformStats.length,
+                adminId: req.user?.id 
+            });
+
+            return response.success(res, stats, 'Social media links statistics retrieved successfully');
+
+        } catch (error) {
+            logger.error('Get social media links statistics error:', { 
+                error: error.message,
+                adminId: req.user?.id 
+            });
+            return response.error(res, 'Failed to retrieve social media links statistics', 500, error.message);
+        }
+    }
 }
 
 export default UserController;

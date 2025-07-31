@@ -367,6 +367,18 @@ model ApiKey {
   updatedAt DateTime @updatedAt
 }
 
+model SocialMediaLink {
+  id            String            @id @default(uuid())
+  categoryName  String            @db.VarChar(100)
+  link          String            @db.VarChar(500)
+  socialMedia   SocialMediaType
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@map("social_media_links")
+}
+
 enum Platform {
   WEB
   APP
@@ -376,6 +388,24 @@ enum PageType {
   MAIN_PAGE
   ARTICLE_PAGE
   CATEGORY
+}
+
+enum SocialMediaType {
+  FACEBOOK
+  TWITTER
+  INSTAGRAM
+  LINKEDIN
+  YOUTUBE
+  TIKTOK
+  SNAPCHAT
+  PINTEREST
+  WHATSAPP
+  TELEGRAM
+  DISCORD
+  REDDIT
+  GITHUB
+  WEBSITE
+  OTHER
 }
 
 enum SubscriptionInterval {
