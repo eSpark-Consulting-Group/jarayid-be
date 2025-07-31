@@ -379,6 +379,27 @@ model SocialMediaLink {
   @@map("social_media_links")
 }
 
+model Bug {
+  id          String      @id @default(uuid())
+  type        String
+  category    String
+  description String
+  level       String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+ 
+  events      BugEvent[]
+}
+ 
+model BugEvent {
+  id        String   @id @default(uuid())
+  bugId     String
+  message   String
+  createdAt DateTime @default(now())
+ 
+  bug       Bug      @relation(fields: [bugId], references: [id])
+}
+
 enum Platform {
   WEB
   APP
