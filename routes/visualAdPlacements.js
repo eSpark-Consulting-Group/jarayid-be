@@ -25,8 +25,9 @@ const validation = createValidationMiddleware(schemas);
  *             $ref: '#/components/schemas/VisualAdPlacementCreate'
  *           example:
  *             platform: "WEB"
- *             pageType: "MAIN_PAGE"
- *             positionName: "Header Banner"
+ *             mainPage: "Homepage Header"
+ *             articlePage: "Article Inline Banner"
+ *             category: ["Sports", "Technology"]
  *             adLink: "https://example.com/ad"
  *             isActive: true
  *     responses:
@@ -76,7 +77,7 @@ router.post(
  *         schema:
  *           type: string
  *           maxLength: 100
- *         description: Filter by position name or ad link
+ *         description: Filter by mainPage, articlePage, category, or ad link
  *     responses:
  *       200:
  *         description: Visual ad placements retrieved successfully
@@ -146,8 +147,9 @@ router.get(
  *             $ref: '#/components/schemas/VisualAdPlacementUpdate'
  *           example:
  *             platform: "APP"
- *             pageType: "ARTICLE_PAGE"
- *             positionName: "Footer Banner"
+ *             mainPage: "Updated Homepage Banner"
+ *             articlePage: "Updated Article Banner"
+ *             category: ["Lifestyle", "Business"]
  *             adLink: "https://example.com/updated-ad"
  *             isActive: false
  *     responses:
