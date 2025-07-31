@@ -14,7 +14,7 @@ const validation = createValidationMiddleware(schemas);
  * /api-key:
  *   post:
  *     summary: Add a new API key (Admin only)
- *     tags: [API Keys]
+ *     tags: [API Key]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -49,13 +49,13 @@ router.post(
  * @swagger
  * /api-key:
  *   get:
- *     summary: Get all API keys (Admin only)
- *     tags: [API Keys]
+ *     summary: Get all API key (Admin only)
+ *     tags: [API Key]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: API keys retrieved successfully
+ *         description: API key retrieved successfully
  *       401:
  *         description: Unauthorized
  *       403:
@@ -63,14 +63,14 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/", /*auth*/ /*adminAuth*/ openAIKeyController.getAllApiKeys);
+router.get("/", /*auth*/ /*adminAuth*/ openAIKeyController.getAPIKey);
 
 /**
  * @swagger
  * /api-key/{id}:
  *   put:
  *     summary: Update an API key (Admin only)
- *     tags: [API Keys]
+ *     tags: [API Key]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -116,7 +116,7 @@ router.put(
  * /api-key/{id}:
  *   delete:
  *     summary: Delete an API key (Admin only)
- *     tags: [API Keys]
+ *     tags: [API Key]
  *     security:
  *       - bearerAuth: []
  *     parameters:

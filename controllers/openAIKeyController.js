@@ -9,7 +9,7 @@ const logger = winston.createLogger({
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message, ...meta }) => {
       return `${timestamp} [${level.toUpperCase()}] ApiKey Controller: ${message} ${
-        Object.keys(meta).length ? JSON.stringify(meta) : ""
+        Object.key(meta).length ? JSON.stringify(meta) : ""
       }`;
     })
   ),
@@ -30,6 +30,17 @@ class OpenAIKeyController {
     const { key } = req.body;
 
     try {
+      // Check if any API key already exists
+      const existingKey = await prisma.apiKey.findFirst();
+      if (existingKey) {
+        return response.error(
+          res,
+          "An API key already exists. Please update the existing key instead.",
+          400
+        );
+      }
+
+      // Create new key
       const newKey = await prisma.apiKey.create({
         data: { key },
       });
@@ -43,22 +54,22 @@ class OpenAIKeyController {
     }
   }
 
-  // Get All API Keys
-  async getAllApiKeys(req, res) {
+  // Get an API Key
+  async getAPIKey(req, res) {
     try {
-      let keys = await prisma.apiKey.findMany({
+      let key = await prisma.apiKey.findMany({
         orderBy: { createdAt: "desc" },
       });
 
-      // If no keys found in DB, fall back to env key
-      if (!keys.length && process.env.OPENAI_API_KEY) {
-        keys = [{ id: "env", key: process.env.OPENAI_API_KEY }];
+      // If no key found in DB, fall back to env key
+      if (!key.length && process.env.OPENAI_API_KEY) {
+        key = [{ id: "env", key: process.env.OPENAI_API_KEY }];
       }
 
-      return response.success(res, keys, "API keys retrieved successfully");
+      return response.success(res, key, "API key retrieved successfully");
     } catch (error) {
-      logger.error("Get API keys error:", { error: error?.message || error });
-      return response.error(res, "Failed to retrieve API keys", 500);
+      logger.error("Get API key error:", { error: error?.message || error });
+      return response.error(res, "Failed to retrieve API key", 500);
     }
   }
 
