@@ -14,17 +14,20 @@
  *           description: Platform where the ad is displayed
  *           enum: [WEB, APP]
  *           example: "WEB"
- *         pageType:
+ *         mainPage:
  *           type: string
- *           description: Type of page where the ad appears
- *           enum: [MAIN_PAGE, ARTICLE_PAGE, CATEGORY]
- *           example: "MAIN_PAGE"
- *         positionName:
+ *           description: Main page identifier or location where the ad appears
+ *           example: "HomePageBanner"
+ *         articlePage:
  *           type: string
- *           description: Specific position name for the ad placement
- *           minLength: 3
- *           maxLength: 255
- *           example: "Header Banner"
+ *           description: Article page identifier where the ad appears
+ *           example: "ArticleTopBanner"
+ *         category:
+ *           type: array
+ *           description: List of categories where the ad appears
+ *           items:
+ *             type: string
+ *           example: ["Sports", "Technology"]
  *         adLink:
  *           type: string
  *           format: uri
@@ -48,8 +51,9 @@
  *           example: "2025-07-29T14:00:00Z"
  *       required:
  *         - platform
- *         - pageType
- *         - positionName
+ *         - mainPage
+ *         - articlePage
+ *         - category
  *
  *     VisualAdPlacementCreate:
  *       type: object
@@ -59,17 +63,20 @@
  *           description: Platform where the ad is displayed
  *           enum: [WEB, APP]
  *           example: "WEB"
- *         pageType:
+ *         mainPage:
  *           type: string
- *           description: Type of page where the ad appears
- *           enum: [MAIN_PAGE, ARTICLE_PAGE, CATEGORY]
- *           example: "MAIN_PAGE"
- *         positionName:
+ *           description: Main page identifier or location where the ad appears
+ *           example: "HomePageBanner"
+ *         articlePage:
  *           type: string
- *           description: Specific position name for the ad placement
- *           minLength: 3
- *           maxLength: 255
- *           example: "Sidebar Top"
+ *           description: Article page identifier where the ad appears
+ *           example: "ArticleTopBanner"
+ *         category:
+ *           type: array
+ *           description: List of categories where the ad appears
+ *           items:
+ *             type: string
+ *           example: ["Sports", "Technology"]
  *         adLink:
  *           type: string
  *           format: uri
@@ -83,8 +90,9 @@
  *           example: true
  *       required:
  *         - platform
- *         - pageType
- *         - positionName
+ *         - mainPage
+ *         - articlePage
+ *         - category
  *
  *     VisualAdPlacementUpdate:
  *       type: object
@@ -94,17 +102,20 @@
  *           description: Platform where the ad is displayed
  *           enum: [WEB, APP]
  *           example: "APP"
- *         pageType:
+ *         mainPage:
  *           type: string
- *           description: Type of page where the ad appears
- *           enum: [MAIN_PAGE, ARTICLE_PAGE, CATEGORY]
- *           example: "ARTICLE_PAGE"
- *         positionName:
+ *           description: Main page identifier or location where the ad appears
+ *           example: "HomePageBanner"
+ *         articlePage:
  *           type: string
- *           description: Specific position name for the ad placement
- *           minLength: 3
- *           maxLength: 255
- *           example: "Footer Banner"
+ *           description: Article page identifier where the ad appears
+ *           example: "ArticleTopBanner"
+ *         category:
+ *           type: array
+ *           description: List of categories where the ad appears
+ *           items:
+ *             type: string
+ *           example: ["Sports", "Technology"]
  *         adLink:
  *           type: string
  *           format: uri
