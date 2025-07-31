@@ -9,7 +9,7 @@ import aiSummaryService from './aiSummaryService.js';
 import aiSummaryQueueService from './aiSummaryQueueService.js';
 import viewTrackingService from './viewTrackingService.js';
 import trialService from './trialService.js';
-import openAIKeyService from './openAIKeyService.js';
+import getApiKeyFromDB from './openAIKeyService.js';
 
 export {
     cloudinaryService,
@@ -23,7 +23,7 @@ export {
     aiSummaryQueueService,
     viewTrackingService,
     trialService,
-    openAIKeyService
+    getApiKeyFromDB
 };
 
 export default {
@@ -38,5 +38,5 @@ export default {
     aiSummaryQueueService,
     viewTrackingService,
     trialService,
-    openAIKeyService
+    getApiKeyFromDB
 };

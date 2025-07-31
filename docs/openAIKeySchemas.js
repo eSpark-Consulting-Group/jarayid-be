@@ -7,14 +7,14 @@
  *       properties:
  *         id:
  *           type: string
- *           description: Unique API key ID (UUID)
+ *           description: Unique API key ID
  *           example: "123e4567-e89b-12d3-a456-426614174000"
  *         key:
  *           type: string
- *           description: The API key string
+ *           description: The OpenAI API key
  *           minLength: 10
  *           maxLength: 255
- *           example: "sk_live_51HqN4s...AbCdEf"
+ *           example: "sk-yourkey1234567890"
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -28,15 +28,25 @@
  *       required:
  *         - key
  *
- *     ApiKeySave:
+ *     ApiKeyCreate:
  *       type: object
  *       properties:
  *         key:
  *           type: string
- *           description: The API key string
+ *           description: The OpenAI API key
  *           minLength: 10
  *           maxLength: 255
- *           example: "sk_live_51HqN4s...AbCdEf"
+ *           example: "sk-yourkey1234567890"
  *       required:
  *         - key
+ *
+ *     ApiKeyUpdate:
+ *       type: object
+ *       properties:
+ *         key:
+ *           type: string
+ *           description: The updated OpenAI API key
+ *           minLength: 10
+ *           maxLength: 255
+ *           example: "sk-updatedkey4567890"
  */

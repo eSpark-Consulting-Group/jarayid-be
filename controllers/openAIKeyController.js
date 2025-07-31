@@ -1,7 +1,6 @@
-// controllers/apiKeyController.js
 import { response } from "../utils/index.js";
 import winston from "winston";
-import ApiKeyService from "../services/openAIKeyService.js";
+import prisma from "../prisma/index.js";
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -21,43 +20,92 @@ const logger = winston.createLogger({
   ],
 });
 
-class ApiKeyController {
+class OpenAIKeyController {
   constructor() {
-    this.apiKeyService = new ApiKeyService();
+    this.prisma = prisma;
   }
 
-  // Get the latest API Key
-  async getApiKey(req, res) {
-    try {
-      const apiKey = await this.apiKeyService.getLatestKey();
+  // Create API Key
+  async createApiKey(req, res) {
+    const { key } = req.body;
 
-      if (!apiKey) {
+    try {
+      const newKey = await prisma.apiKey.create({
+        data: { key },
+      });
+
+      return response.success(res, newKey, "API key added successfully", 201);
+    } catch (error) {
+      logger.error("Create API key error:", {
+        error: error?.message || error,
+      });
+      return response.error(res, "Failed to add API key", 500);
+    }
+  }
+
+  // Get All API Keys
+  async getAllApiKeys(req, res) {
+    try {
+      const keys = await prisma.apiKey.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+
+      return response.success(res, keys, "API keys retrieved successfully");
+    } catch (error) {
+      logger.error("Get API keys error:", {
+        error: error?.message || error,
+      });
+      return response.error(res, "Failed to retrieve API keys", 500);
+    }
+  }
+
+  // Update API Key
+  async updateApiKey(req, res) {
+    const { id } = req.params;
+    const { key } = req.body;
+
+    try {
+      const existing = await prisma.apiKey.findUnique({ where: { id } });
+      if (!existing) {
         return response.error(res, "API key not found", 404);
       }
 
-      return response.success(res, apiKey, "API key retrieved successfully");
+      const updated = await prisma.apiKey.update({
+        where: { id },
+        data: {
+          ...(key && { key }),
+        },
+      });
+
+      return response.success(res, updated, "API key updated successfully");
     } catch (error) {
-      logger.error("Get API key error:", { error: error?.message || error });
-      return response.error(res, "Failed to retrieve API key", 500);
+      logger.error("Update API key error:", {
+        error: error?.message || error,
+      });
+      return response.error(res, "Failed to update API key", 500);
     }
   }
 
-  // Save or update API Key
-  async saveApiKey(req, res) {
-    const { key } = req.body;
-
-    if (!key) {
-      return response.error(res, "API key is required", 400);
-    }
+  // Delete API Key
+  async deleteApiKey(req, res) {
+    const { id } = req.params;
 
     try {
-      const savedKey = await this.apiKeyService.saveOrUpdateKey(key);
-      return response.success(res, savedKey, "API key saved successfully", 201);
+      const existing = await prisma.apiKey.findUnique({ where: { id } });
+      if (!existing) {
+        return response.error(res, "API key not found", 404);
+      }
+
+      await prisma.apiKey.delete({ where: { id } });
+
+      return response.success(res, null, "API key deleted successfully");
     } catch (error) {
-      logger.error("Save API key error:", { error: error?.message || error });
-      return response.error(res, "Failed to save API key", 500);
+      logger.error("Delete API key error:", {
+        error: error?.message || error,
+      });
+      return response.error(res, "Failed to delete API key", 500);
     }
   }
 }
 
-export default ApiKeyController;
+export default OpenAIKeyController;

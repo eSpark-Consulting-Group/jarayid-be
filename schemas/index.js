@@ -28,5 +28,5 @@ export default {
     subscription: subscriptionSchema,
     cookie: cookieSchema,
     visualAdPlacement: visualAdPlacementSchema,
-    openAIKey: openAIKeySchema
+    apiKey: openAIKeySchema
 };
