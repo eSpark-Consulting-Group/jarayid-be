@@ -7,12 +7,12 @@ import prisma from "../prisma/index.js";
 export default async function getApiKeyFromDB() {
   try {
     const keyRecord = await prisma.apiKey.findFirst({
-      orderBy: { createdAt: "desc" }, // adjust if your model differs
+      orderBy: { createdAt: "desc" },
     });
 
-    return keyRecord?.key || null;
+    return keyRecord?.key?.trim() || null;
   } catch (error) {
-    console.error("Error fetching OpenAI API key from DB:", error);
+    console.error("❌ Error fetching OpenAI API key from DB:", error);
     return null;
   }
 }

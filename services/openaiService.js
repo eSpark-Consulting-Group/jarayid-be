@@ -23,21 +23,24 @@ const logger = winston.createLogger({
 
 class OpenAIService {
   constructor() {
-    (async () => {
-      const dbKey = await getApiKeyFromDB();
-      const key = dbKey || process.env.OPENAI_API_KEY || OPENAI_CONFIG.apiKey;
+    this.isEnabled = false; // default until init runs
+    this.openai = null;
+  }
 
-      if (OPENAI_CONFIG.enabled && key) {
-        this.openai = new OpenAI({ apiKey: key });
-        this.isEnabled = true;
-        logger.info("🤖 OpenAI service initialized successfully");
-      } else {
-        this.isEnabled = false;
-        logger.warn(
-          "⚠️ OpenAI service disabled - missing API key or disabled in config"
-        );
-      }
-    })();
+  async init() {
+    const dbKey = await getApiKeyFromDB();
+    const key = dbKey || process.env.OPENAI_API_KEY || OPENAI_CONFIG.apiKey;
+
+    if (OPENAI_CONFIG.enabled && key) {
+      this.openai = new OpenAI({ apiKey: key });
+      this.isEnabled = true;
+      logger.info("🤖 OpenAI service initialized successfully");
+    } else {
+      this.isEnabled = false;
+      logger.warn(
+        "⚠️ OpenAI service disabled - missing API key or disabled in config"
+      );
+    }
   }
 
   /**
@@ -257,4 +260,6 @@ Requirements:
   }
 }
 
-export default new OpenAIService();
+const openAIService = new OpenAIService();
+await openAIService.init();
+export default openAIService;

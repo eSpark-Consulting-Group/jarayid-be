@@ -46,15 +46,18 @@ class OpenAIKeyController {
   // Get All API Keys
   async getAllApiKeys(req, res) {
     try {
-      const keys = await prisma.apiKey.findMany({
+      let keys = await prisma.apiKey.findMany({
         orderBy: { createdAt: "desc" },
       });
 
+      // If no keys found in DB, fall back to env key
+      if (!keys.length && process.env.OPENAI_API_KEY) {
+        keys = [{ id: "env", key: process.env.OPENAI_API_KEY }];
+      }
+
       return response.success(res, keys, "API keys retrieved successfully");
     } catch (error) {
-      logger.error("Get API keys error:", {
-        error: error?.message || error,
-      });
+      logger.error("Get API keys error:", { error: error?.message || error });
       return response.error(res, "Failed to retrieve API keys", 500);
     }
   }
