@@ -1,8 +1,5 @@
 import Joi from 'joi';
 
-// Cookie categories enum for validation
-const COOKIE_CATEGORIES = ['ESSENTIAL', 'FUNCTIONAL', 'ANALYTICS', 'MARKETING', 'PREFERENCES'];
-
 const cookieSchema = {
     create: Joi.object({
         name: Joi.string()
@@ -33,17 +30,6 @@ const cookieSchema = {
                 'string.min': 'Duration is required',
                 'string.max': 'Duration cannot exceed 50 characters',
                 'any.required': 'Duration is required'
-            }),
-        category: Joi.string()
-            .valid(...COOKIE_CATEGORIES)
-            .default('FUNCTIONAL')
-            .messages({
-                'any.only': `Category must be one of: ${COOKIE_CATEGORIES.join(', ')}`
-            }),
-        isEssential: Joi.boolean()
-            .default(false)
-            .messages({
-                'boolean.base': 'isEssential must be a boolean value'
             }),
         isEnabled: Joi.boolean()
             .default(true)
@@ -86,17 +72,6 @@ const cookieSchema = {
                 'string.min': 'Duration is required',
                 'string.max': 'Duration cannot exceed 50 characters'
             }),
-        category: Joi.string()
-            .valid(...COOKIE_CATEGORIES)
-            .optional()
-            .messages({
-                'any.only': `Category must be one of: ${COOKIE_CATEGORIES.join(', ')}`
-            }),
-        isEssential: Joi.boolean()
-            .optional()
-            .messages({
-                'boolean.base': 'isEssential must be a boolean value'
-            }),
         isEnabled: Joi.boolean()
             .optional()
             .messages({
@@ -130,17 +105,6 @@ const cookieSchema = {
                 'number.min': 'Limit must be at least 1',
                 'number.max': 'Limit cannot exceed 100'
             }),
-        category: Joi.string()
-            .valid(...COOKIE_CATEGORIES)
-            .optional()
-            .messages({
-                'any.only': `Category must be one of: ${COOKIE_CATEGORIES.join(', ')}`
-            }),
-        isEssential: Joi.boolean()
-            .optional()
-            .messages({
-                'boolean.base': 'isEssential must be a boolean value'
-            }),
         isEnabled: Joi.boolean()
             .optional()
             .messages({
@@ -153,10 +117,10 @@ const cookieSchema = {
                 'string.max': 'Search term cannot exceed 255 characters'
             }),
         sortBy: Joi.string()
-            .valid('name', 'purpose', 'category', 'duration', 'createdAt', 'updatedAt')
+            .valid('name', 'purpose', 'duration', 'createdAt', 'updatedAt')
             .default('createdAt')
             .messages({
-                'any.only': 'sortBy must be one of: name, purpose, category, duration, createdAt, updatedAt'
+                'any.only': 'sortBy must be one of: name, purpose, duration, createdAt, updatedAt'
             }),
         sortOrder: Joi.string()
             .valid('asc', 'desc')
@@ -196,12 +160,6 @@ const cookieSchema = {
                 'any.required': 'Cookie IDs array is required'
             }),
         updates: Joi.object({
-            category: Joi.string()
-                .valid(...COOKIE_CATEGORIES)
-                .optional()
-                .messages({
-                    'any.only': `Category must be one of: ${COOKIE_CATEGORIES.join(', ')}`
-                }),
             isEnabled: Joi.boolean()
                 .optional()
                 .messages({

@@ -30,7 +30,7 @@ class CookieController {
      */
     async createCookie(req, res) {
         try {
-            const { name, purpose, duration, category, isEssential, isEnabled, description } = req.body;
+            const { name, purpose, duration, isEnabled, description } = req.body;
 
             // Check if cookie with same name already exists
             const existingCookie = await prisma.cookie.findUnique({
@@ -46,8 +46,6 @@ class CookieController {
                     name,
                     purpose,
                     duration,
-                    category,
-                    isEssential: isEssential || false,
                     isEnabled: isEnabled !== undefined ? isEnabled : true,
                     description: description || null
                 }
@@ -56,7 +54,6 @@ class CookieController {
             logger.info('Cookie created successfully', {
                 cookieId: cookie.id,
                 name: cookie.name,
-                category: cookie.category,
                 adminId: req.user?.id
             });
 
@@ -77,8 +74,6 @@ class CookieController {
             const {
                 page = 1,
                 limit = 10,
-                category,
-                isEssential,
                 isEnabled,
                 search,
                 sortBy = 'createdAt',
@@ -87,14 +82,6 @@ class CookieController {
 
             // Build where conditions
             const where = {};
-
-            if (category) {
-                where.category = category;
-            }
-
-            if (isEssential !== undefined) {
-                where.isEssential = isEssential === 'true';
-            }
 
             if (isEnabled !== undefined) {
                 where.isEnabled = isEnabled === 'true';
@@ -140,7 +127,7 @@ class CookieController {
                 meta: {
                     totalCookies: total,
                     currentPageCookies: cookies.length,
-                    filters: { category, isEssential, isEnabled, search }
+                    filters: { isEnabled, search }
                 }
             };
 
@@ -167,29 +154,15 @@ class CookieController {
                     name: true,
                     purpose: true,
                     duration: true,
-                    category: true,
-                    isEssential: true,
                     description: true
                 },
                 orderBy: [
-                    { isEssential: 'desc' },
-                    { category: 'asc' },
                     { name: 'asc' }
                 ]
             });
 
-            // Group cookies by category
-            const groupedCookies = cookies.reduce((groups, cookie) => {
-                const category = cookie.category;
-                if (!groups[category]) {
-                    groups[category] = [];
-                }
-                groups[category].push(cookie);
-                return groups;
-            }, {});
-
             return response.success(res, {
-                cookies: groupedCookies,
+                cookies,
                 totalCookies: cookies.length
             }, 'Public cookies retrieved successfully');
 
@@ -230,7 +203,7 @@ class CookieController {
     async updateCookie(req, res) {
         try {
             const { id } = req.params;
-            const { name, purpose, duration, category, isEssential, isEnabled, description } = req.body;
+            const { name, purpose, duration, isEnabled, description } = req.body;
 
             // Check if cookie exists
             const existingCookie = await prisma.cookie.findUnique({
@@ -258,8 +231,6 @@ class CookieController {
                     ...(name && { name }),
                     ...(purpose && { purpose }),
                     ...(duration && { duration }),
-                    ...(category && { category }),
-                    ...(isEssential !== undefined && { isEssential }),
                     ...(isEnabled !== undefined && { isEnabled }),
                     ...(description !== undefined && { description })
                 }
@@ -296,11 +267,6 @@ class CookieController {
                 return response.notFound(res, 'Cookie not found');
             }
 
-            // Prevent deletion of essential cookies
-            if (existingCookie.isEssential) {
-                return response.error(res, 'Cannot delete essential cookies', 403);
-            }
-
             await prisma.cookie.delete({
                 where: { id }
             });
@@ -333,11 +299,6 @@ class CookieController {
 
             if (!cookie) {
                 return response.notFound(res, 'Cookie not found');
-            }
-
-            // Prevent disabling essential cookies
-            if (cookie.isEssential && cookie.isEnabled) {
-                return response.error(res, 'Cannot disable essential cookies', 403);
             }
 
             const updatedCookie = await prisma.cookie.update({
@@ -375,32 +336,18 @@ class CookieController {
         try {
             const [
                 totalCookies,
-                enabledCookies,
-                essentialCookies,
-                categoryStats
+                enabledCookies
             ] = await Promise.all([
                 prisma.cookie.count(),
-                prisma.cookie.count({ where: { isEnabled: true } }),
-                prisma.cookie.count({ where: { isEssential: true } }),
-                prisma.cookie.groupBy({
-                    by: ['category'],
-                    _count: { category: true },
-                    orderBy: { _count: { category: 'desc' } }
-                })
+                prisma.cookie.count({ where: { isEnabled: true } })
             ]);
 
             const stats = {
                 overview: {
                     totalCookies,
                     enabledCookies,
-                    disabledCookies: totalCookies - enabledCookies,
-                    essentialCookies,
-                    nonEssentialCookies: totalCookies - essentialCookies
-                },
-                categoryBreakdown: categoryStats.map(stat => ({
-                    category: stat.category,
-                    count: stat._count.category
-                }))
+                    disabledCookies: totalCookies - enabledCookies
+                }
             };
 
             return response.success(res, stats, 'Cookie statistics retrieved successfully');
@@ -425,24 +372,6 @@ class CookieController {
 
             if (!updates || Object.keys(updates).length === 0) {
                 return response.error(res, 'Updates object is required and cannot be empty', 400);
-            }
-
-            // Validate that we're not trying to disable essential cookies
-            if (updates.isEnabled === false) {
-                const essentialCookies = await prisma.cookie.findMany({
-                    where: {
-                        id: { in: cookieIds },
-                        isEssential: true
-                    },
-                    select: { id: true, name: true }
-                });
-
-                if (essentialCookies.length > 0) {
-                    return response.error(res, 
-                        `Cannot disable essential cookies: ${essentialCookies.map(c => c.name).join(', ')}`, 
-                        403
-                    );
-                }
             }
 
             const updateResult = await prisma.cookie.updateMany({

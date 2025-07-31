@@ -12,17 +12,10 @@ const validation = createValidationMiddleware(schemas);
 // Public routes (no authentication required)
 /**
  * @swagger
- * /api/cookies/public:
+ * /cookies/public:
  *   get:
  *     summary: Get all enabled cookies for public display (cookie consent banner)
  *     tags: [Cookies]
- *     parameters:
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *           enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *         description: Filter by cookie category
  *     responses:
  *       200:
  *         description: List of enabled cookies
@@ -42,10 +35,8 @@ const validation = createValidationMiddleware(schemas);
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/Cookie'
- *                     total:
+ *                     totalCookies:
  *                       type: integer
- *                     categories:
- *                       type: object
  *       500:
  *         description: Server error
  */
@@ -54,7 +45,7 @@ router.get('/public', cookieController.getPublicCookies);
 // Admin routes (authentication + admin role required)
 /**
  * @swagger
- * /api/cookies:
+ * /cookies:
  *   post:
  *     summary: Create a new cookie (Admin only)
  *     tags: [Cookies]
@@ -84,13 +75,6 @@ router.get('/public', cookieController.getPublicCookies);
  *                 type: string
  *                 minLength: 1
  *                 maxLength: 50
- *               category:
- *                 type: string
- *                 enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *                 default: FUNCTIONAL
- *               isEssential:
- *                 type: boolean
- *                 default: false
  *               isEnabled:
  *                 type: boolean
  *                 default: true
@@ -120,7 +104,7 @@ router.post('/',
 
 /**
  * @swagger
- * /api/cookies:
+ * /cookies:
  *   get:
  *     summary: Get all cookies with filtering and pagination (Admin only)
  *     tags: [Cookies]
@@ -141,15 +125,6 @@ router.post('/',
  *           maximum: 100
  *           default: 10
  *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *           enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *       - in: query
- *         name: isEssential
- *         schema:
- *           type: boolean
- *       - in: query
  *         name: isEnabled
  *         schema:
  *           type: boolean
@@ -162,7 +137,7 @@ router.post('/',
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [name, purpose, category, duration, createdAt, updatedAt]
+ *           enum: [name, purpose, duration, createdAt, updatedAt]
  *           default: createdAt
  *       - in: query
  *         name: sortOrder
@@ -189,7 +164,7 @@ router.get('/',
 
 /**
  * @swagger
- * /api/cookies/stats:
+ * /cookies/stats:
  *   get:
  *     summary: Get cookie statistics (Admin only)
  *     tags: [Cookies]
@@ -210,16 +185,12 @@ router.get('/',
  *                 data:
  *                   type: object
  *                   properties:
- *                     total:
+ *                     totalCookies:
  *                       type: integer
- *                     enabled:
+ *                     enabledCookies:
  *                       type: integer
- *                     disabled:
+ *                     disabledCookies:
  *                       type: integer
- *                     essential:
- *                       type: integer
- *                     byCategory:
- *                       type: object
  *       401:
  *         description: Unauthorized
  *       403:
@@ -235,7 +206,7 @@ router.get('/stats',
 
 /**
  * @swagger
- * /api/cookies/{id}:
+ * /cookies/{id}:
  *   get:
  *     summary: Get a specific cookie by ID (Admin only)
  *     tags: [Cookies]
@@ -271,7 +242,7 @@ router.get('/:id',
 
 /**
  * @swagger
- * /api/cookies/{id}:
+ * /cookies/{id}:
  *   put:
  *     summary: Update a specific cookie (Admin only)
  *     tags: [Cookies]
@@ -305,11 +276,6 @@ router.get('/:id',
  *                 type: string
  *                 minLength: 1
  *                 maxLength: 50
- *               category:
- *                 type: string
- *                 enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
- *               isEssential:
- *                 type: boolean
  *               isEnabled:
  *                 type: boolean
  *               description:
@@ -341,7 +307,7 @@ router.put('/:id',
 
 /**
  * @swagger
- * /api/cookies/{id}:
+ * /cookies/{id}:
  *   delete:
  *     summary: Delete a specific cookie (Admin only)
  *     tags: [Cookies]
@@ -358,7 +324,7 @@ router.put('/:id',
  *       200:
  *         description: Cookie deleted successfully
  *       400:
- *         description: Invalid cookie ID or cannot delete essential cookie
+ *         description: Invalid cookie ID
  *       401:
  *         description: Unauthorized
  *       403:
@@ -377,7 +343,7 @@ router.delete('/:id',
 
 /**
  * @swagger
- * /api/cookies/{id}/toggle:
+ * /cookies/{id}/toggle:
  *   patch:
  *     summary: Toggle cookie enabled/disabled status (Admin only)
  *     tags: [Cookies]
@@ -394,7 +360,7 @@ router.delete('/:id',
  *       200:
  *         description: Cookie status toggled successfully
  *       400:
- *         description: Invalid cookie ID or cannot disable essential cookie
+ *         description: Invalid cookie ID
  *       401:
  *         description: Unauthorized
  *       403:
@@ -413,7 +379,7 @@ router.patch('/:id/toggle',
 
 /**
  * @swagger
- * /api/cookies/bulk-update:
+ * /cookies/bulk-update:
  *   patch:
  *     summary: Bulk update multiple cookies (Admin only)
  *     tags: [Cookies]
@@ -440,9 +406,6 @@ router.patch('/:id/toggle',
  *                 type: object
  *                 minProperties: 1
  *                 properties:
- *                   category:
- *                     type: string
- *                     enum: [ESSENTIAL, FUNCTIONAL, ANALYTICS, MARKETING, PREFERENCES]
  *                   isEnabled:
  *                     type: boolean
  *                   purpose:

@@ -1,12 +1,12 @@
 generator client {
   provider = "prisma-client-js"
 }
- 
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
- 
+
 model User {
   id                   String           @id @default(uuid())
   name                 Json?
@@ -21,7 +21,6 @@ model User {
   imageKey             String?          @db.VarChar(500)
   lastLoginAt          DateTime?
   country              String?          @db.VarChar(100)
-  isDeleted            Boolean?          @default(false)
   phoneNumber          String?          @db.VarChar(20)
   resetPasswordToken   String?          @db.VarChar(500)
   resetPasswordExpires DateTime?
@@ -36,10 +35,11 @@ model User {
   readLater            ReadLater[]
   subscriptions        Subscription[]
   youtubeContents      YouTubeContent[]
- 
+  isDeleted            Boolean?         @default(false)
+
   @@map("users")
 }
- 
+
 model Category {
   id              String           @id @default(uuid())
   name            String           @db.VarChar(500)
@@ -57,10 +57,10 @@ model Category {
   createdBy       User             @relation(fields: [createdById], references: [id])
   rssFeeds        RSSFeed[]
   youtubeContents YouTubeContent[]
- 
+
   @@map("categories")
 }
- 
+
 model RSSFeed {
   id         String           @id @default(uuid())
   name       String           @db.VarChar(500)
@@ -74,10 +74,10 @@ model RSSFeed {
   updatedAt  DateTime         @updatedAt
   articles   Article[]
   category   Category         @relation(fields: [categoryId], references: [id])
- 
+
   @@map("rss_feeds")
 }
- 
+
 model Article {
   id              String           @id @default(uuid())
   title           String           @db.VarChar(500)
@@ -91,7 +91,7 @@ model Article {
   categoryId      String?
   subType         CategorySubType?
   rssFeedId       String?
-  status          Boolean           @default(true)
+  status          Boolean          @default(true)
   pinned          Boolean          @default(false)
   viewCount       Int              @default(0)
   publishedAt     DateTime?
@@ -104,10 +104,10 @@ model Article {
   comments        Comment[]
   favorites       Favorite[]
   readLater       ReadLater[]
- 
+
   @@map("articles")
 }
- 
+
 model Comment {
   id        String   @id @default(uuid())
   articleId String
@@ -117,15 +117,15 @@ model Comment {
   createdAt DateTime @default(now())
   article   Article  @relation(fields: [articleId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
- 
+
   @@map("comments")
 }
- 
+
 model Contact {
-  id             String   @id @default(uuid())
- 
-  userId         String?
- 
+  id String @id @default(uuid())
+
+  userId String?
+
   name           String   @db.VarChar(500)
   business_name  String   @db.VarChar(150)
   contact_number String   @db.VarChar(20)
@@ -134,34 +134,33 @@ model Contact {
   message        String
   isResponded    Boolean  @default(false)
   createdAt      DateTime @default(now())
- 
-  user           User?     @relation(fields: [userId], references: [id])
- 
- 
+
+  user User? @relation(fields: [userId], references: [id])
+
   @@map("contacts")
 }
- 
+
 model SponsorAccount {
-  id            String   @id @default(uuid())
-  name          String   @db.VarChar(200)
-  businessName  String   @db.VarChar(200)
-  website       String?  @db.VarChar(500)
-  contactEmail  String   @db.VarChar(200)
-  category      String   @db.VarChar(100)
-  contact       String?  @db.VarChar(500)
-  status        SponsorStatus @default(ACTIVE)
-  phone         String?  @db.VarChar(20)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
- 
+  id           String        @id @default(uuid())
+  name         String        @db.VarChar(200)
+  businessName String        @db.VarChar(200)
+  website      String?       @db.VarChar(500)
+  contactEmail String        @db.VarChar(200)
+  category     String        @db.VarChar(100)
+  contact      String?       @db.VarChar(500)
+  status       SponsorStatus @default(ACTIVE)
+  phone        String?       @db.VarChar(20)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
   @@map("sponsor_accounts")
 }
- 
+
 enum SponsorStatus {
   ACTIVE
   INACTIVE
 }
- 
+
 model StaticPage {
   id        String   @id @default(uuid())
   title     String   @unique
@@ -170,8 +169,7 @@ model StaticPage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
- 
- 
+
 model Favorite {
   id        String   @id @default(uuid())
   userId    String
@@ -179,10 +177,10 @@ model Favorite {
   createdAt DateTime @default(now())
   article   Article  @relation(fields: [articleId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
- 
+
   @@map("favorites")
 }
- 
+
 model ReadLater {
   id        String   @id @default(uuid())
   userId    String
@@ -191,49 +189,47 @@ model ReadLater {
   updatedAt DateTime @updatedAt
   article   Article  @relation(fields: [articleId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
- 
+
   @@map("read_later")
 }
- 
+
 model Subscription {
-  id                    String               @id @default(uuid())
-  userId                String
-  isPremium             Boolean              @default(false)
-  trialEndsAt           DateTime?
- 
+  id          String    @id @default(uuid())
+  userId      String
+  isPremium   Boolean   @default(false)
+  trialEndsAt DateTime?
+
   // Paddle Integration Fields
-  paddleSubscriptionId  String?              @unique @db.VarChar(255)
-  paddleCustomerId      String?              @db.VarChar(255)
-  paddlePlanId          String?              @db.VarChar(255)
-  status                SubscriptionStatus   @default(INACTIVE)
-  currentPeriodStart    DateTime?
-  currentPeriodEnd      DateTime?
-  cancelAtPeriodEnd     Boolean              @default(false)
-  cancelledAt           DateTime?
-  pausedAt              DateTime?
-  resumedAt             DateTime?
- 
+  paddleSubscriptionId String?            @unique @db.VarChar(255)
+  paddleCustomerId     String?            @db.VarChar(255)
+  paddlePlanId         String?            @db.VarChar(255)
+  status               SubscriptionStatus @default(INACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  cancelledAt          DateTime?
+  pausedAt             DateTime?
+  resumedAt            DateTime?
+
   // Payment Information
-  currency              String?              @db.VarChar(3)
-  amount                Float?
-  interval              SubscriptionInterval?
- 
+  currency String?               @db.VarChar(3)
+  amount   Float?
+  interval SubscriptionInterval?
+
   // Metadata
-  metadata              Json?
-  lastPaymentAt         DateTime?
-  nextPaymentAt         DateTime?
-  failedPaymentCount    Int                  @default(0)
- 
- 
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  user                  User                 @relation(fields: [userId], references: [id])
- 
- 
+  metadata           Json?
+  lastPaymentAt      DateTime?
+  nextPaymentAt      DateTime?
+  failedPaymentCount Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
   @@unique([userId], name: "unique_user_subscription")
   @@map("subscriptions")
 }
- 
+
 model Ad {
   id        String     @id @default(uuid())
   platform  AdPlatform
@@ -243,10 +239,10 @@ model Ad {
   revenue   Float
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
- 
+
   @@map("ads")
 }
- 
+
 model YouTubeContent {
   id           String             @id @default(uuid())
   title        String             @db.VarChar(500)
@@ -264,10 +260,10 @@ model YouTubeContent {
   updatedAt    DateTime           @updatedAt
   category     Category           @relation(fields: [categoryId], references: [id])
   createdBy    User               @relation(fields: [createdById], references: [id])
- 
+
   @@map("youtube_contents")
 }
- 
+
 model ArticleView {
   id        String   @id @default(uuid())
   articleId String
@@ -277,12 +273,12 @@ model ArticleView {
   viewedAt  DateTime @default(now())
   article   Article  @relation(fields: [articleId], references: [id])
   user      User?    @relation(fields: [userId], references: [id])
- 
+
   @@unique([articleId, userId], name: "unique_user_article_view")
   @@unique([articleId, ipAddress], name: "unique_ip_article_view")
   @@map("article_views")
 }
- 
+
 model ExternalLink {
   id               String   @id @default(uuid())
   toolName         String   @db.VarChar(255)
@@ -304,39 +300,39 @@ enum Status {
   DRAFT
   PUBLISH
 }
- 
+
 enum CategoryType {
   COUNTRY
   NORMAL
   MEDIA
 }
- 
+
 enum CategorySubType {
   SPORTS
   ECONOMICS
   POLITICS
 }
- 
+
 enum UserRole {
   ADMIN
   USER
 }
- 
+
 enum AdPlatform {
   WEB
   MOBILE
 }
- 
+
 enum AdType {
   GOOGLE_ADS
   AD_MOB
 }
- 
+
 enum YouTubeContentType {
   SHORTS
   FULL_VIDEO
 }
- 
+
 enum SubscriptionStatus {
   ACTIVE
   INACTIVE
@@ -348,53 +344,49 @@ enum SubscriptionStatus {
 }
 
 model Cookie {
-  id          String     @id @default(uuid())
-  name        String     @unique @db.VarChar(100)
-  purpose     String     @db.VarChar(500)
-  duration    String     @db.VarChar(50)
-  category    CookieCategory @default(FUNCTIONAL)
-  isEssential Boolean    @default(false)
-  isEnabled   Boolean    @default(true)
-  description String?    @db.Text
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique @db.VarChar(100)
+  purpose     String   @db.VarChar(500)
+  duration    String   @db.VarChar(50)
+  isEnabled   Boolean  @default(true)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@map("cookies")
 }
 
- 
 model VisualAdPlacement {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   platform     Platform
   pageType     PageType
   positionName String
-  adLink       String?   // Could be ad unit ID or URL
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  adLink       String? // Could be ad unit ID or URL
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
- 
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum Platform {
   WEB
   APP
 }
- 
+
 enum PageType {
   MAIN_PAGE
   ARTICLE_PAGE
   CATEGORY
 }
 
-enum CookieCategory {
-  ESSENTIAL
-  FUNCTIONAL
-  ANALYTICS
-  MARKETING
-  PREFERENCES
-}
-
 enum SubscriptionInterval {
   MONTHLY
   YEARLY
   WEEKLY
- 
 }
