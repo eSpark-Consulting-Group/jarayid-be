@@ -193,6 +193,9 @@ class UserController {
             if (user.isDeleted) {
                 return response.error(res, 'This account is not available. Please contact admin for assistance.', 403);
             }
+            if(user.isBanned){
+                return response.error(res, 'This account is banned. Please contact admin for assistance.', 403);
+            }
 
             if (loginType === 'local') {
                 if (user.isSocialLogin) {
