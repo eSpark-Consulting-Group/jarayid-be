@@ -3,7 +3,7 @@ import { Router } from "express";
 import schemas from "../schemas/index.js";
 import createValidationMiddleware from "../middleware/validate.js";
 import { OpenAIKeyController } from "../controllers/index.js";
-import { /*auth*/ adminAuth } from "../middleware/index.js";
+import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
 const openAIKeyController = new OpenAIKeyController();
@@ -39,8 +39,8 @@ const validation = createValidationMiddleware(schemas);
  */
 router.post(
   "/",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.apiKey.create,
   openAIKeyController.createApiKey
 );
@@ -63,7 +63,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/", /*auth*/ /*adminAuth*/ openAIKeyController.getAPIKey);
+router.get("/", auth, adminAuth, openAIKeyController.getAPIKey);
 
 /**
  * @swagger
@@ -104,8 +104,8 @@ router.get("/", /*auth*/ /*adminAuth*/ openAIKeyController.getAPIKey);
  */
 router.put(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.apiKey.params,
   validation.apiKey.update,
   openAIKeyController.updateApiKey
@@ -142,8 +142,8 @@ router.put(
  */
 router.delete(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.apiKey.params,
   openAIKeyController.deleteApiKey
 );

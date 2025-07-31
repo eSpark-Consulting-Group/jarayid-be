@@ -10,10 +10,10 @@ export const schemaPaths = [
     './docs/staticPageSchemas.js',
     './docs/contactUsSchemas.js',
     './docs/sponsorAccountSchemas.js',
-    './docs/externalLinkSchemas.js',
+    './docs/externalLinksSchemas.js',
     './docs/cookieSchemas.js',
     './docs/visualAdPlacementSchemas.js',
-    './docs/openAISchemas.js',
+    './docs/openAIKeySchemas.js',
 
 ];
 
