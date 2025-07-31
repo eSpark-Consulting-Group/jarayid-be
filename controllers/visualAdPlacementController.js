@@ -30,15 +30,16 @@ class VisualAdPlacementController {
   async createVisualAdPlacement(req, res) {
     const {
       platform,
-      pageType,
-      positionName,
+      mainPage,
+      articlePage,
+      category,
       adLink,
       isActive = true,
     } = req.body;
 
     try {
       const adPlacement = await prisma.visualAdPlacement.create({
-        data: { platform, pageType, positionName, adLink, isActive },
+        data: { platform, mainPage, articlePage, category, adLink, isActive },
       });
 
       return response.success(
@@ -59,7 +60,6 @@ class VisualAdPlacementController {
   async getAllVisualAdPlacements(req, res) {
     try {
       const { page = 1, limit = 10, search } = req.query;
-
       const { skip, take } = pagination.getPaginationParams(req.query, {
         defaultLimit: 10,
         maxLimit: 200,
@@ -70,8 +70,10 @@ class VisualAdPlacementController {
       // Search filter
       if (search) {
         where.OR = [
-          { positionName: { contains: search, mode: "insensitive" } },
+          { mainPage: { contains: search, mode: "insensitive" } },
+          { articlePage: { contains: search, mode: "insensitive" } },
           { adLink: { contains: search, mode: "insensitive" } },
+          { category: { has: search.toLowerCase() } }, 
         ];
       }
 
@@ -117,7 +119,7 @@ class VisualAdPlacementController {
 
     try {
       const placement = await prisma.visualAdPlacement.findUnique({
-        where: { id: id },
+        where: { id },
       });
 
       if (!placement) {
@@ -140,11 +142,12 @@ class VisualAdPlacementController {
   // Update Visual Ad Placement
   async updateVisualAdPlacement(req, res) {
     const { id } = req.params;
-    const { platform, pageType, positionName, adLink, isActive } = req.body;
+    const { platform, mainPage, articlePage, category, adLink, isActive } =
+      req.body;
 
     try {
       const existing = await prisma.visualAdPlacement.findUnique({
-        where: { id: id },
+        where: { id },
       });
 
       if (!existing) {
@@ -152,11 +155,12 @@ class VisualAdPlacementController {
       }
 
       const updated = await prisma.visualAdPlacement.update({
-        where: { id: id },
+        where: { id },
         data: {
           ...(platform && { platform }),
-          ...(pageType && { pageType }),
-          ...(positionName && { positionName }),
+          ...(mainPage && { mainPage }),
+          ...(articlePage && { articlePage }),
+          ...(Array.isArray(category) && { category }),
           ...(adLink && { adLink }),
           ...(typeof isActive === "boolean" && { isActive }),
         },
@@ -181,7 +185,7 @@ class VisualAdPlacementController {
 
     try {
       const existing = await prisma.visualAdPlacement.findUnique({
-        where: { id: id },
+        where: { id },
       });
 
       if (!existing) {
@@ -189,7 +193,7 @@ class VisualAdPlacementController {
       }
 
       await prisma.visualAdPlacement.delete({
-        where: { id: id },
+        where: { id },
       });
 
       return response.success(

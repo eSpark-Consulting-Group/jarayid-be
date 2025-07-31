@@ -6,6 +6,8 @@ const messages = {
   "string.min": "{{#label}} must be at least {{#limit}} characters long",
   "string.max": "{{#label}} must be at most {{#limit}} characters long",
   "string.uri": "{{#label}} must be a valid URL",
+  "array.base": "{{#label}} must be an array",
+  "array.min": "{{#label}} must contain at least {{#limit}} items",
   "any.required": "{{#label}} is required",
   "any.only": "{{#label}} must be one of {{#valids}}",
   "number.min": "{{#label}} must be at least {{#limit}}",
@@ -18,15 +20,18 @@ const visualAdPlacementSchema = {
   create: Joi.object({
     platform: Joi.string().valid("WEB", "APP").required().messages(messages),
 
-    pageType: Joi.string()
-      .valid("MAIN_PAGE", "ARTICLE_PAGE", "CATEGORY")
+    mainPage: Joi.string().min(1).max(255).trim().required().messages(messages),
+
+    articlePage: Joi.string()
+      .min(1)
+      .max(255)
+      .trim()
       .required()
       .messages(messages),
 
-    positionName: Joi.string()
-      .min(3)
-      .max(255)
-      .trim()
+    category: Joi.array()
+      .items(Joi.string().min(1).max(255).messages(messages))
+      .min(1)
       .required()
       .messages(messages),
 
@@ -39,15 +44,18 @@ const visualAdPlacementSchema = {
   update: Joi.object({
     platform: Joi.string().valid("WEB", "APP").optional().messages(messages),
 
-    pageType: Joi.string()
-      .valid("MAIN_PAGE", "ARTICLE_PAGE", "CATEGORY")
+    mainPage: Joi.string().min(1).max(255).trim().optional().messages(messages),
+
+    articlePage: Joi.string()
+      .min(1)
+      .max(255)
+      .trim()
       .optional()
       .messages(messages),
 
-    positionName: Joi.string()
-      .min(3)
-      .max(255)
-      .trim()
+    category: Joi.array()
+      .items(Joi.string().min(1).max(255).messages(messages))
+      .min(1)
       .optional()
       .messages(messages),
 
