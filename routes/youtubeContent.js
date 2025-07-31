@@ -597,4 +597,187 @@ router.patch('/:id/toggle-status', auth, validation.youtubeContent.params, youtu
  */
 router.delete('/:id', auth, validation.youtubeContent.params, youtubeContentController.delete);
 
+/**
+ * @swagger
+ * /youtube-content/{id}/refresh-thumbnail:
+ *   patch:
+ *     summary: Refresh thumbnail for YouTube content
+ *     tags: [YouTube Content]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: YouTube content ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               quality:
+ *                 type: string
+ *                 enum: [default, mqdefault, hqdefault, sddefault, maxresdefault]
+ *                 default: hqdefault
+ *                 description: Thumbnail quality to use
+ *     responses:
+ *       200:
+ *         description: Thumbnail refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Invalid YouTube URL
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied (not owner or admin)
+ *       404:
+ *         description: YouTube content not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/:id/refresh-thumbnail', auth, validation.youtubeContent.params, validation.youtubeContent.refreshThumbnail, youtubeContentController.refreshThumbnail);
+
+/**
+ * @swagger
+ * /youtube-content/{id}/thumbnails:
+ *   get:
+ *     summary: Get thumbnail alternatives for YouTube content
+ *     tags: [YouTube Content]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: YouTube content ID
+ *     responses:
+ *       200:
+ *         description: Thumbnail alternatives retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     contentId:
+ *                       type: string
+ *                     contentTitle:
+ *                       type: string
+ *                     contentType:
+ *                       type: string
+ *                     currentThumbnail:
+ *                       type: string
+ *                     videoId:
+ *                       type: string
+ *                     isShorts:
+ *                       type: boolean
+ *                     thumbnailAlternatives:
+ *                       type: object
+ *                       properties:
+ *                         default:
+ *                           type: string
+ *                         medium:
+ *                           type: string
+ *                         high:
+ *                           type: string
+ *                         standard:
+ *                           type: string
+ *                         maxres:
+ *                           type: string
+ *       400:
+ *         description: Invalid YouTube URL
+ *       404:
+ *         description: YouTube content not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/thumbnails', auth, validation.youtubeContent.params, youtubeContentController.getThumbnails);
+
+/**
+ * @swagger
+ * /youtube-content/bulk-refresh-thumbnails:
+ *   post:
+ *     summary: Bulk refresh thumbnails for multiple YouTube contents
+ *     tags: [YouTube Content]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               contentIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of content IDs to refresh (optional, if not provided all user's content will be processed)
+ *               quality:
+ *                 type: string
+ *                 enum: [default, mqdefault, hqdefault, sddefault, maxresdefault]
+ *                 default: hqdefault
+ *                 description: Thumbnail quality to use
+ *               onlyEmpty:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Only refresh content that doesn't have a thumbnail
+ *     responses:
+ *       200:
+ *         description: Bulk refresh completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                         updated:
+ *                           type: integer
+ *                         skipped:
+ *                           type: integer
+ *                     results:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/bulk-refresh-thumbnails', auth, validation.youtubeContent.bulkRefreshThumbnails, youtubeContentController.bulkRefreshThumbnails);
+
 export default router;

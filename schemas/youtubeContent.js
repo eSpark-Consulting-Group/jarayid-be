@@ -232,6 +232,41 @@ const youtubeContentSchemas = {
                 'string.uuid': 'ID must be a valid UUID',
                 'any.required': 'ID is required'
             })
+    }),
+
+    // Refresh thumbnail validation
+    refreshThumbnail: Joi.object({
+        quality: Joi.string()
+            .valid('default', 'mqdefault', 'hqdefault', 'sddefault', 'maxresdefault')
+            .default('hqdefault')
+            .messages({
+                'any.only': 'Quality must be one of: default, mqdefault, hqdefault, sddefault, maxresdefault'
+            })
+    }),
+
+    // Bulk refresh thumbnails validation
+    bulkRefreshThumbnails: Joi.object({
+        contentIds: Joi.array()
+            .items(Joi.string().uuid().messages({
+                'string.uuid': 'Each content ID must be a valid UUID'
+            }))
+            .optional()
+            .messages({
+                'array.base': 'Content IDs must be an array'
+            }),
+        
+        quality: Joi.string()
+            .valid('default', 'mqdefault', 'hqdefault', 'sddefault', 'maxresdefault')
+            .default('hqdefault')
+            .messages({
+                'any.only': 'Quality must be one of: default, mqdefault, hqdefault, sddefault, maxresdefault'
+            }),
+        
+        onlyEmpty: Joi.boolean()
+            .default(false)
+            .messages({
+                'boolean.base': 'onlyEmpty must be a boolean value'
+            })
     })
 };
 
