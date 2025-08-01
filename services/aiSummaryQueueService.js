@@ -75,7 +75,6 @@ class AISummaryQueueService {
                 category: 'AI Summary',
                 level: 'error',
                 description: `Failed to initialize AI Summary Queue: ${error.message}`,
-                meta: { error: error.stack }
             });
             throw error;
         }

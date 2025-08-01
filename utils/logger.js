@@ -8,9 +8,8 @@ const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message, ...meta }) => {
-      return `${timestamp} [${level.toUpperCase()}] ${message} ${
-        Object.keys(meta).length ? JSON.stringify(meta) : ""
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `${timestamp} [${level.toUpperCase()}] ${message}
       }`;
     })
   ),
@@ -28,7 +27,6 @@ const logger = winston.createLogger({
  * @param {string} options.category - Category of bug (AI Summary, Queue, etc.)
  * @param {string} options.level - Severity level (error, warn, info)
  * @param {string} options.description - Error description or stack trace
- * @param {Object} [options.meta] - Additional metadata (optional)
  */
 export async function logBug({
   type = "Service",
@@ -38,7 +36,7 @@ export async function logBug({
 }) {
   try {
     // Log to winston
-    logger.log({ level, message: `[${category}] ${description}`, meta });
+    logger.log({ level, message: `[${category}] ${description}` });
 
     // Save to Bug model in DB
     await prisma.bug.create({
@@ -50,6 +48,7 @@ export async function logBug({
           typeof description === "string"
             ? description
             : JSON.stringify(description),
+
       },
     });
   } catch (err) {
