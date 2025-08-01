@@ -16,6 +16,8 @@ import visualAdPlacementRoutes from './visualAdPlacements.js';
 import sponsorAccountRoutes from './sponsorAccount.js';
 import subscriptionsRouter from './subscriptions.js';
 import openAIKeyRoutes from './openAIKey.js';
+import bugRoutes from './bugs.js';
+import bugWebhookRoutes from './bugWebhookRoutes.js';
 
 
 
@@ -62,5 +64,11 @@ router.use('/visual-ad-placements', visualAdPlacementRoutes);
 
 // OpenAI Key related routes
 router.use('/api-key', openAIKeyRoutes);
+
+// Bug related routes
+router.use('/bugs', bugRoutes);
+
+// Bug Webhook related routes
+router.use('/bug-webhook', bugWebhookRoutes);
 
 export default router;

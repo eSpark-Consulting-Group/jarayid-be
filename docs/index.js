@@ -14,6 +14,8 @@ export const schemaPaths = [
     './docs/cookieSchemas.js',
     './docs/visualAdPlacementSchemas.js',
     './docs/openAIKeySchemas.js',
+    './docs/bugSchemas.js',
+    './docs/bugWebhookSchemas.js',
 
 ];
 

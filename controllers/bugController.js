@@ -101,6 +101,43 @@ class BugController {
       return response.error(res, "Failed to retrieve bug", 500);
     }
   }
+  // Delete Bug by ID
+  async deleteBugById(req, res) {
+    const { id } = req.params;
+
+    try {
+      const bug = await prisma.bug.findUnique({ where: { id } });
+      if (!bug) {
+        return response.error(res, "Bug not found", 404);
+      }
+
+      // First delete all related events
+      await prisma.bugEvent.deleteMany({
+        where: { bugId: id },
+      });
+
+      // Now delete the bug
+      await prisma.bug.delete({ where: { id } });
+
+      return response.success(res, null, "Bug deleted successfully");
+    } catch (error) {
+      logger.error("Delete bug error:", { error: error?.message || error });
+      return response.error(res, "Failed to delete bug", 500);
+    }
+  }
+
+  // Clear all bugs
+  async clearAllBugs(req, res) {
+    try {
+      await prisma.bugEvent.deleteMany();
+      await prisma.bug.deleteMany();
+
+      return response.success(res, null, "All bugs cleared successfully");
+    } catch (error) {
+      logger.error("Clear all bugs error:", { error: error?.message || error });
+      return response.error(res, "Failed to clear bugs", 500);
+    }
+  }
 }
 
 export default BugController;

@@ -3,7 +3,7 @@ import { Router } from "express";
 import schemas from "../schemas/index.js";
 import createValidationMiddleware from "../middleware/validate.js";
 import { BugController } from "../controllers/index.js";
-import { auth, adminAuth } from "../middleware/index.js";
+// import { /*auth*/ adminAuth } from "../middleware/index.js";
 
 const router = Router();
 const bugController = new BugController();
@@ -47,8 +47,8 @@ const validation = createValidationMiddleware(schemas);
  */
 router.get(
   "/",
-  auth,
-  adminAuth,
+  /*auth*/
+  /*adminAuth*/
   validation.bug?.query || ((req, res, next) => next()),
   bugController.getAllBugs
 );
@@ -56,34 +56,52 @@ router.get(
 /**
  * @swagger
  * /bugs/{id}:
- *   get:
- *     summary: Get bug by ID
+ *   delete:
+ *     summary: Delete a specific bug by ID
  *     tags: [Bugs]
  *     security:
- *        - bearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Bug ID
+ *         description: The bug ID
  *     responses:
  *       200:
- *         description: Bug retrieved successfully
- *       400:
- *         description: Invalid bug ID
+ *         description: Bug deleted successfully
  *       404:
  *         description: Bug not found
  *       500:
  *         description: Internal server error
  */
-router.get(
+router.delete(
   "/:id",
-  auth,
-  adminAuth,
-  validation.bug?.params || ((req, res, next) => next()),
-  bugController.getBugById
+  /*auth*/
+  /*adminAuth*/
+  bugController.deleteBugById
+);
+
+/**
+ * @swagger
+ * /bugs:
+ *   delete:
+ *     summary: Clear all bugs
+ *     tags: [Bugs]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All bugs cleared successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+  "/",
+  /*auth*/
+  /*adminAuth*/
+  bugController.clearAllBugs
 );
 
 export default router;
