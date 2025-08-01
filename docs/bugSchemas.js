@@ -1,44 +1,122 @@
+import { Router } from "express";
+import BugController from "../controllers/index.js";
+// import { auth, adminAuth } from "../middleware/index.js";
+
+const router = Router();
+const bugController = new BugController();
+
 /**
  * @swagger
- * components:
- *   schemas:
- *     Bug:
- *       type: object
- *       properties:
- *         id:
+ * /bugs:
+ *   get:
+ *     summary: Get all bugs with pagination and optional search
+ *     tags: [Bugs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
  *           type: string
- *           description: Unique bug ID
- *           example: "b123e4567-e89b-12d3-a456-426614174000"
- *         type:
- *           type: string
- *           description: Type of the bug (e.g., frontend, backend, database)
- *           example: "Backend"
- *         category:
- *           type: string
- *           description: Category of the bug (e.g., API Error, Validation Issue)
- *           example: "API Error"
- *         description:
- *           type: string
- *           description: Detailed description of the bug
- *           example: "User profile API returns 500 when updating email."
- *         level:
- *           type: string
- *           description: Severity level of the bug
- *           enum: [Low, Medium, High, Critical]
- *           example: "High"
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: Date and time when the bug was created in the system
- *           example: "2025-07-31T10:15:30Z"
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           description: Date and time when the bug record was last updated
- *           example: "2025-07-31T11:00:00Z"
- *       required:
- *         - type
- *         - category
- *         - description
- *         - level
+ *           maxLength: 100
+ *         description: Filter bugs by type, category, or description
+ *     responses:
+ *       200:
+ *         description: Bugs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Bug'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *       500:
+ *         description: Internal server error
  */
+router.get(
+  "/",
+  // auth,
+  // adminAuth,
+  (req, res, next) => next(),
+  bugController.getAllBugs.bind(bugController)
+);
+
+/**
+ * @swagger
+ * /bugs/{id}:
+ *   delete:
+ *     summary: Delete a specific bug by ID
+ *     tags: [Bugs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The bug ID
+ *     responses:
+ *       200:
+ *         description: Bug deleted successfully
+ *       404:
+ *         description: Bug not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+  "/:id",
+  // auth,
+  // adminAuth,
+  (req, res, next) => next(),
+  bugController.deleteBugById.bind(bugController)
+);
+
+/**
+ * @swagger
+ * /bugs:
+ *   delete:
+ *     summary: Clear all bugs and events
+ *     tags: [Bugs]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All bugs cleared successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+  "/",
+  // auth,
+  // adminAuth,
+  bugController.clearAllBugs.bind(bugController)
+);
+
+export default router;

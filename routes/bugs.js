@@ -1,19 +1,16 @@
 import { Router } from "express";
 
-import schemas from "../schemas/index.js";
-import createValidationMiddleware from "../middleware/validate.js";
-import { BugController } from "../controllers/index.js";
-// import { /*auth*/ adminAuth } from "../middleware/index.js";
+import BugController from "../controllers/index.js";
+// import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
 const bugController = new BugController();
-const validation = createValidationMiddleware(schemas);
 
 /**
  * @swagger
  * /bugs:
  *   get:
- *     summary: Get all bugs with pagination
+ *     summary: Get all bugs with pagination and optional search
  *     tags: [Bugs]
  *     security:
  *       - bearerAuth: []
@@ -47,10 +44,10 @@ const validation = createValidationMiddleware(schemas);
  */
 router.get(
   "/",
-  /*auth*/
-  /*adminAuth*/
-  validation.bug?.query || ((req, res, next) => next()),
-  bugController.getAllBugs
+  // auth,
+  // adminAuth,
+  (req, res, next) => next(),
+  bugController.getAllBugs.bind(bugController)
 );
 
 /**
@@ -78,16 +75,17 @@ router.get(
  */
 router.delete(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
-  bugController.deleteBugById
+  // auth,
+  // adminAuth,
+  (req, res, next) => next(),
+  bugController.deleteBugById.bind(bugController)
 );
 
 /**
  * @swagger
  * /bugs:
  *   delete:
- *     summary: Clear all bugs
+ *     summary: Clear all bugs and events
  *     tags: [Bugs]
  *     security:
  *       - bearerAuth: []
@@ -99,9 +97,9 @@ router.delete(
  */
 router.delete(
   "/",
-  /*auth*/
-  /*adminAuth*/
-  bugController.clearAllBugs
+  // auth,
+  // adminAuth,
+  bugController.clearAllBugs.bind(bugController)
 );
 
 export default router;

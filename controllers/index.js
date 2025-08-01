@@ -14,7 +14,6 @@ import CookieController from './cookieController.js';
 import VisualAdPlacementController from './visualAdPlacementController.js';
 import OpenAIKeyController from './openAIKeyController.js';
 import BugController from './bugController.js';
-import BugWebhookController from './bugWebhookController.js';
 
 
 export { 
@@ -32,8 +31,7 @@ export {
     CookieController,
     VisualAdPlacementController,
     OpenAIKeyController,
-    BugController,
-    BugWebhookController
+    BugController
 
 };
 export default UserController;
