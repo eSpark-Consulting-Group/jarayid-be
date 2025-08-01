@@ -26,37 +26,6 @@ class BugController {
   }
 
   /**
-   * Utility: Log a bug into DB for in-app monitoring
-   */
-  async logBug({ type, category, description, level = "error", eventMessage }) {
-    try {
-      const bug = await prisma.bug.create({
-        data: {
-          type,
-          category,
-          description,
-          level,
-          events: eventMessage
-            ? {
-                create: [
-                  {
-                    message: eventMessage,
-                  },
-                ],
-              }
-            : undefined,
-        },
-        include: { events: true },
-      });
-
-      logger.info(`Bug logged: ${bug.id}`);
-      return bug;
-    } catch (error) {
-      logger.error("Failed to log bug", { error: error?.message || error });
-    }
-  }
-
-  /**
    * GET /bugs - Get all bugs with pagination + search
    */
   async getAllBugs(req, res) {
@@ -83,12 +52,35 @@ class BugController {
           skip,
           take,
           orderBy: { createdAt: "desc" },
+          include: { events: true },
         }),
         prisma.bug.count({ where }),
       ]);
 
+      // 🧹 Clean bug descriptions
+      const cleanedBugs = bugs.map((bug) => {
+        let description = bug.description?.trim() || "";
+
+        try {
+          const parsed = JSON.parse(description);
+          if (typeof parsed === "object") {
+            description = JSON.stringify(parsed, null, 2);
+          }
+        } catch {
+          description = description
+            .replace(/\(node:.*?\)\s?/g, "")
+            .replace(/DeprecationWarning:\s*/g, "Deprecation: ")
+            .replace(/Use `node --trace-deprecation.*?\n?/g, "")
+            .replace(/\\n/g, "\n")
+            .replace(/\s*\n\s*\n/g, "\n")
+            .trim();
+        }
+
+        return { ...bug, description };
+      });
+
       const paginatedResponse = pagination.createPaginatedResponse(
-        bugs,
+        cleanedBugs,
         req.query,
         total,
         { defaultLimit: 10, maxLimit: 200 }
@@ -103,15 +95,6 @@ class BugController {
       logger.error("Get bugs error", {
         error: error?.message || error,
         query: req.query,
-      });
-
-      // Log this error as a bug for in-app monitoring
-      await this.logBug({
-        type: "ControllerError",
-        category: "Bug Retrieval",
-        description: error.message,
-        level: "error",
-        eventMessage: "Failed to retrieve bugs",
       });
 
       return response.error(res, "Failed to retrieve bugs", 500, error.message);
@@ -136,15 +119,6 @@ class BugController {
       return response.success(res, null, "Bug deleted successfully");
     } catch (error) {
       logger.error("Delete bug error", { error: error?.message || error });
-
-      await this.logBug({
-        type: "ControllerError",
-        category: "Bug Deletion",
-        description: error.message,
-        level: "error",
-        eventMessage: `Failed to delete bug ID: ${id}`,
-      });
-
       return response.error(res, "Failed to delete bug", 500);
     }
   }
@@ -160,15 +134,6 @@ class BugController {
       return response.success(res, null, "All bugs cleared successfully");
     } catch (error) {
       logger.error("Clear all bugs error", { error: error?.message || error });
-
-      await this.logBug({
-        type: "ControllerError",
-        category: "Bulk Bug Deletion",
-        description: error.message,
-        level: "error",
-        eventMessage: "Failed to clear all bugs",
-      });
-
       return response.error(res, "Failed to clear bugs", 500);
     }
   }

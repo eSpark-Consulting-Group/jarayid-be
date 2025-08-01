@@ -4,7 +4,7 @@ import winston from 'winston';
 import { REDIS_CONFIG, RSS_PROCESSING_CONFIG } from '../config/config.js';
 import rssProcessor from './rssProcessor.js';
 import prisma from '../prisma/index.js';
-
+import { logBug } from '../utils/logger.js';
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -103,6 +103,12 @@ class RSSQueueService {
                 return result;
             } catch (error) {
                 logger.error(`❌ RSS feed processing failed for ${feedId}:`, { error: error?.message || error });
+                logBug({
+                    type: 'Queue',
+                    category: 'RSS Processing',
+                    level: 'error',
+                    description: `Failed to process RSS feed ${feedId}`,
+                });
                 throw error;
             }
         });
@@ -123,6 +129,12 @@ class RSSQueueService {
 
                 if (otherActiveRSSJobs.length > 0) {
                     logger.warn(`⚠️  Other RSS jobs already running (${otherActiveRSSJobs.length}), skipping this job`);
+                    logBug({
+                        type: 'Queue',
+                        category: 'RSS Processing',
+                        level: 'warn',
+                        description: `Skipped batch RSS processing due to active jobs: ${otherActiveRSSJobs.map(j => j.id).join(', ')}`,
+                    });
                     return { skipped: true, reason: 'Other RSS jobs already running' };
                 }
 
@@ -157,6 +169,12 @@ class RSSQueueService {
                     } catch (aiError) {
                         logger.warn('⚠️ Failed to queue AI summary job:', { error: aiError.message });
                         // Don't fail the RSS job if AI queueing fails
+                        logBug({
+                            type: 'Queue',
+                            category: 'AI Summary',
+                            level: 'warn',
+                            description: `Failed to queue AI summary job after RSS processing: ${aiError.message}`,
+                        });
                     }
                 }
                 
@@ -165,6 +183,12 @@ class RSSQueueService {
                 return result;
             } catch (error) {
                 logger.error(`❌ Batch RSS processing failed:`, { error: error?.message || error });
+                logBug({
+                    type: 'Queue',
+                    category: 'RSS Processing',
+                    level: 'error',
+                    description: `Failed to process all RSS feeds: ${error.message}`,
+                });
                 throw error;
             }
         });
@@ -205,6 +229,12 @@ class RSSQueueService {
 
         this.rssQueue.on('failed', (job, err) => {
             logger.error(`❌ RSS job ${job.id} failed:`, { error: err.message?.message || err.message });
+            logBug({
+                type: 'Queue',
+                category: 'RSS Processing',
+                level: 'error',
+                description: `RSS job ${job.id} failed: ${err.message?.message || err.message}`,
+            });
         });
 
         this.rssQueue.on('progress', (job, progress) => {
@@ -213,11 +243,23 @@ class RSSQueueService {
 
         this.rssQueue.on('stalled', (job) => {
             logger.warn(`⚠️  Job ${job.id} stalled`);
+            logBug({
+                type: 'Queue',
+                category: 'RSS Processing',
+                level: 'warn',
+                description: `Job ${job.id} stalled during processing`,
+            });
         });
 
         // Error handling
         this.rssQueue.on('error', (error) => {
             logger.error('❌ RSS Queue error:', { error: error?.message || error });
+            logBug({
+                type: 'Queue',
+                category: 'RSS Processing',
+                level: 'error',
+                description: `RSS Queue error: ${error?.message || error}`,
+            });
         });
     }
 
@@ -238,6 +280,12 @@ class RSSQueueService {
 
         if (hasSameFeedJob) {
             logger.warn(`⚠️  RSS feed ${feedId} already queued/processing, skipping duplicate`);
+            logBug({
+                type: 'Queue',
+                category: 'RSS Processing',
+                level: 'warn',
+                description: `Skipped processing for feed ${feedId} - already queued or processing`,
+            });
             return null;
         }
 
@@ -277,11 +325,23 @@ class RSSQueueService {
 
         if (hasActiveRSSJob) {
             logger.warn(`⚠️  RSS processing job already active, skipping ${options.source || 'manual'} run`);
+            logBug({
+                type: 'Queue',
+                category: 'RSS Processing',
+                level: 'warn',
+                description: `Skipped batch RSS processing - another job already active: ${activeJobs.map(j => j.id).join(', ')}`,
+            });
             return null;
         }
 
         if (hasWaitingRSSJob && options.source === 'scheduled') {
             logger.warn(`⚠️  RSS processing job already waiting, skipping scheduled run`);
+            logBug({
+                type: 'Queue',
+                category: 'RSS Processing',
+                level: 'warn',
+                description: `Skipped scheduled RSS processing - another job already waiting: ${waitingJobs.map(j => j.id).join(', ')}`,
+            });
             return null;
         }
 
@@ -343,6 +403,13 @@ class RSSQueueService {
             });
         } catch (error) {
             logger.error('Failed to queue job result storage:', { error: error?.message || error });
+            logBug({
+                type: 'Queue',
+                category: 'Job Results',
+                level: 'error',
+                description: `Failed to queue job result storage: ${error.message}`,
+            });
+            throw error; // Re-throw to handle in caller
         }
     }
 
@@ -370,6 +437,12 @@ class RSSQueueService {
             return { success: true };
         } catch (error) {
             logger.error('Failed to save job result to database:', { error: error?.message || error });
+            logBug({
+                type: 'Database',
+                category: 'Job Results',
+                level: 'error',
+                description: `Failed to save job result for ${jobData.jobId}: ${error.message}`,
+            });
             throw error;
         }
     }
@@ -448,6 +521,12 @@ class RSSQueueService {
             logger.info(`🧹 Cleaned jobs older than ${age / (60 * 60 * 1000)} hours`);
         } catch (error) {
             logger.error('Failed to clean old jobs:', { error: error?.message || error });
+            logBug({
+                type: 'Queue',
+                category: 'Cleanup',
+                level: 'error',
+                description: `Failed to clean old jobs: ${error.message}`,
+            });
         }
     }
 
@@ -484,8 +563,15 @@ class RSSQueueService {
                 lastProcessed: stats.completed > 0 ? new Date() : null
             };
         } catch (error) {
+            logBug: ({
+                    type: 'Queue',
+                    category: 'Health Check',
+                    level: 'error',
+                    description: `Failed to get RSS queue health status: ${error.message}`,
+                })
             return {
                 status: 'error',
+                message: 'Failed to retrieve RSS queue health status',
                 error: error.message
             };
         }
@@ -528,6 +614,12 @@ class RSSQueueService {
             return true;
         } catch (error) {
             logger.error('❌ Failed to initialize RSS Queue Service:', { error: error?.message || error });
+            logBug({
+                type: 'Service',
+                category: 'RSS Queue Initialization',
+                level: 'error',
+                description: `Failed to initialize RSS Queue Service: ${error.message}`,
+            });
             throw error;
         }
     }
@@ -545,6 +637,12 @@ class RSSQueueService {
             logger.info('✅ RSS Queue Service shutdown complete');
         } catch (error) {
             logger.error('❌ Error during RSS Queue Service shutdown:', { error: error?.message || error });
+            logBug({
+                type: 'Service',
+                category: 'RSS Queue Shutdown',
+                level: 'error',
+                description: `Error during RSS Queue Service shutdown: ${error.message}`,
+            });
         }
     }
 }

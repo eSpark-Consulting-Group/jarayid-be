@@ -1,31 +1,18 @@
-import BugController from "../controllers/bugController.js";
-import { response } from "../utils/index.js";
+// middleware/errorHandler.js
+import logError from "../utils/logger.js";
 
-// Create a single instance of BugController for logging
-const bugController = new BugController();
+export const errorHandler = (err, req, res, next) => {
+  console.error(err); // This will also trigger logError due to override
 
-/**
- * Global error-handling middleware.
- * This should be registered AFTER all routes in your Express app.
- */
-const errorHandler = async (err, req, res, next) => {
-  console.error("Unhandled Error:", err);
+  logError(err.message, {
+    stack: err.stack,
+    errorCode: err.name,
+    category: "API",
+    path: req.originalUrl,
+    method: req.method,
+  });
 
-  try {
-    // Log the bug into the in-app bug monitoring system
-    await bugController.logBug({
-      type: "UnhandledError",
-      category: "Server",
-      description: err.message || "Unknown error occurred",
-      level: "error",
-      eventMessage: err.stack || "No stack trace available",
-    });
-  } catch (loggingError) {
-    console.error("Failed to log bug:", loggingError);
-  }
-
-  // Send a safe error response to the client
-  return response.error(res, "Internal Server Error", 500, err.message);
+  res
+    .status(err.status || 500)
+    .json({ message: err.message || "Internal Server Error" });
 };
-
-export default errorHandler;

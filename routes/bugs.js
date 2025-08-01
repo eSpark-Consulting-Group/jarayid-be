@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import BugController from "../controllers/index.js";
+import { BugController } from "../controllers/index.js";
 // import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
@@ -46,8 +46,7 @@ router.get(
   "/",
   // auth,
   // adminAuth,
-  (req, res, next) => next(),
-  bugController.getAllBugs.bind(bugController)
+  bugController.getAllBugs
 );
 
 /**
@@ -77,8 +76,7 @@ router.delete(
   "/:id",
   // auth,
   // adminAuth,
-  (req, res, next) => next(),
-  bugController.deleteBugById.bind(bugController)
+  bugController.deleteBugById
 );
 
 /**
@@ -99,7 +97,7 @@ router.delete(
   "/",
   // auth,
   // adminAuth,
-  bugController.clearAllBugs.bind(bugController)
+  bugController.clearAllBugs
 );
 
 export default router;

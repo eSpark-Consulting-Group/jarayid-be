@@ -355,7 +355,7 @@ class RSSProcessor {
                 throw new Error(`Failed to fetch image: HTTP ${response.status}`);
             }
 
-            const buffer = await response.buffer();
+            const buffer = await response.arrayBuffer();
             const contentType = response.headers.get('content-type');
 
             // Validate image type
