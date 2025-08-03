@@ -216,6 +216,40 @@ class AISummaryService {
                     contentForAI = this.getOriginalContentText(article);
                 }
 
+                // Step 1.5: Translate content (works for both scraped and RSS content)
+                if (openaiService.isAvailable() && contentForAI && contentForAI.length > 50) {
+                    try {
+                        logger.info(`🌐 Translating content to Arabic and English (source: ${scrapedContent ? 'scraped' : 'RSS'})...`);
+                        
+                        // Detect source language first
+                        const detectedLang = await openaiService.detectLanguage(contentForAI);
+                        logger.info(`🔍 Detected language: ${detectedLang}`);
+
+                        // Translate content
+                        const translation = await openaiService.translateContent(contentForAI, detectedLang);
+                        
+                        if (translation.success) {
+                            translatedContent = {
+                                originalContent: translation.originalContent,
+                                englishContent: translation.englishContent,
+                                arabicContent: translation.arabicContent,
+                                sourceLanguage: detectedLang,
+                                translatedAt: translation.translatedAt,
+                                contentSource: scrapedContent ? 'scraped' : 'rss'
+                            };
+                            
+                            logger.info(`✅ Content translated successfully: EN(${translation.englishContent?.length || 0} chars), AR(${translation.arabicContent?.length || 0} chars)`);
+                        } else {
+                            logger.warn(`⚠️ Translation failed: ${translation.error}`);
+                        }
+                    } catch (translationError) {
+                        logger.warn(`⚠️ Translation error:`, { 
+                            error: translationError.message,
+                            articleId: article.id
+                        });
+                    }
+                }
+
                 // Step 2: Generate AI summaries if we have content
                 let summaryEnglish = null;
                 let summaryArabic = null;
@@ -259,20 +293,28 @@ class AISummaryService {
                     summaryArabic
                 };
 
-                // Update originalContent with scraped data if available
-                if (scrapedContent) {
+                // Update originalContent with enhanced data
+                if (scrapedContent || translatedContent) {
                     updateData.originalContent = {
-                        ...article.originalContent,
-                        scrapedContent: {
+                        ...article.originalContent
+                    };
+
+                    // Add scraped content if available
+                    if (scrapedContent) {
+                        updateData.originalContent.scrapedContent = {
                             textContent: scrapedContent.textContent,
                             htmlContent: scrapedContent.htmlContent,
                             metadata: scrapedContent.metadata,
                             scrapedAt: scrapedContent.scrapedAt,
                             contentLength: scrapedContent.contentLength,
-                            // Add translated content if available
                             translatedContent: translatedContent || null
-                        }
-                    };
+                        };
+                    }
+
+                    // Add RSS translated content if we have translation but no scraped content
+                    if (translatedContent && !scrapedContent) {
+                        updateData.originalContent.rssTranslatedContent = translatedContent;
+                    }
                 }
 
                 const updatedArticle = await prisma.article.update({
