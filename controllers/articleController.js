@@ -179,6 +179,8 @@ class ArticleController {
             if (categoryId) where.categoryId = categoryId;
             if (subType) where.subType = subType;
             if (pinned !== undefined) where.pinned = pinned === 'true';
+            where.summaryArabic != null;
+            where.summaryEnglish !=null;
             
             // Status filter - support both boolean and string values
             if (status !== undefined) {
