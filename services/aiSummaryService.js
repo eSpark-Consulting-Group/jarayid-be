@@ -312,7 +312,7 @@ class AISummaryService {
                     }
 
                     // Add RSS translated content if we have translation but no scraped content
-                    if (translatedContent && !scrapedContent) {
+                    if (translatedContent && scrapedContent) {
                         updateData.originalContent.rssTranslatedContent = translatedContent;
                     }
                 }
