@@ -137,6 +137,7 @@ class AISummaryService {
                 // Step 1: Get enhanced content from webpage if URL available
                 let contentForAI = null;
                 let scrapedContent = null;
+                let translatedContent = null;
 
                 if (article.url && webScraperService.isScrapableUrl(article.url)) {
                     try {
@@ -146,6 +147,40 @@ class AISummaryService {
                         scrapedContent = webContent.originalData;
                         
                         logger.info(`✅ Scraped ${contentForAI.length} characters for AI processing`);
+
+                        // Step 1.5: Translate the scraped content to both languages
+                        if (openaiService.isAvailable() && contentForAI && contentForAI.length > 50) {
+                            try {
+                                logger.info(`🌐 Translating scraped content to Arabic and English...`);
+                                
+                                // Detect source language first
+                                const detectedLang = await openaiService.detectLanguage(contentForAI);
+                                logger.info(`🔍 Detected language: ${detectedLang}`);
+
+                                // Translate content
+                                const translation = await openaiService.translateContent(contentForAI, detectedLang);
+                                
+                                if (translation.success) {
+                                    translatedContent = {
+                                        originalContent: translation.originalContent,
+                                        englishContent: translation.englishContent,
+                                        arabicContent: translation.arabicContent,
+                                        sourceLanguage: detectedLang,
+                                        translatedAt: translation.translatedAt
+                                    };
+                                    
+                                    logger.info(`✅ Content translated successfully: EN(${translation.englishContent?.length || 0} chars), AR(${translation.arabicContent?.length || 0} chars)`);
+                                } else {
+                                    logger.warn(`⚠️ Translation failed: ${translation.error}`);
+                                }
+                            } catch (translationError) {
+                                logger.warn(`⚠️ Translation error:`, { 
+                                    error: translationError.message,
+                                    articleId: article.id
+                                });
+                            }
+                        }
+                        
                     } catch (scrapeError) {
                         logger.warn(`⚠️ Failed to scrape ${article.url}:`, { 
                             error: scrapeError.message,
@@ -233,7 +268,9 @@ class AISummaryService {
                             htmlContent: scrapedContent.htmlContent,
                             metadata: scrapedContent.metadata,
                             scrapedAt: scrapedContent.scrapedAt,
-                            contentLength: scrapedContent.contentLength
+                            contentLength: scrapedContent.contentLength,
+                            // Add translated content if available
+                            translatedContent: translatedContent || null
                         }
                     };
                 }
@@ -251,6 +288,14 @@ class AISummaryService {
                     hasEnglishSummary: !!summaryEnglish,
                     hasArabicSummary: !!summaryArabic,
                     hasScrapedContent: !!scrapedContent,
+                    hasTranslatedContent: !!translatedContent,
+                    translationDetails: translatedContent ? {
+                        sourceLanguage: translatedContent.sourceLanguage,
+                        hasEnglishTranslation: !!translatedContent.englishContent,
+                        hasArabicTranslation: !!translatedContent.arabicContent,
+                        englishLength: translatedContent.englishContent?.length || 0,
+                        arabicLength: translatedContent.arabicContent?.length || 0
+                    } : null,
                     attempt: attempt
                 };
 
@@ -449,6 +494,16 @@ class AISummaryService {
             }
         });
 
+        // Get translation statistics
+        const articlesWithTranslations = await prisma.article.count({
+            where: {
+                originalContent: {
+                    path: ['scrapedContent', 'translatedContent'],
+                    not: null
+                }
+            }
+        });
+
         return {
             totalArticles,
             missingEnglish,
@@ -456,8 +511,10 @@ class AISummaryService {
             missingBoth,
             withUrl,
             scrapableUrls,
+            articlesWithTranslations,
             needsProcessing: Math.max(missingEnglish, missingArabic),
-            completionRate: totalArticles > 0 ? Math.round(((totalArticles - Math.max(missingEnglish, missingArabic)) / totalArticles) * 100) : 0
+            completionRate: totalArticles > 0 ? Math.round(((totalArticles - Math.max(missingEnglish, missingArabic)) / totalArticles) * 100) : 0,
+            translationRate: totalArticles > 0 ? Math.round((articlesWithTranslations / totalArticles) * 100) : 0
         };
     }
 
