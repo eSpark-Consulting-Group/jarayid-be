@@ -16,7 +16,7 @@ export const schemaPaths = [
     './docs/openAIKeySchemas.js',
     './docs/bugSchemas.js',
     './docs/bugWebhookSchemas.js',
-
+    './docs/rssSummarizationSchemas.js'
 ];
 
 export const routePaths = [

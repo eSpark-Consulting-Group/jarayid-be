@@ -13,7 +13,7 @@ import cookieSchema from './cookie.js';
 import visualAdPlacementSchema from './visualAdPlacement.js';
 import openAIKeySchema from './openAIKey.js';
 import socialMediaLinkSchema from './socialMediaLink.js';
-
+import rssSummarizationSchema from './rssSummarization.js';
 
 export default {
     category: categorySchema,
@@ -30,5 +30,6 @@ export default {
     cookie: cookieSchema,
     visualAdPlacement: visualAdPlacementSchema,
     apiKey: openAIKeySchema,
-    socialMediaLink: socialMediaLinkSchema
+    socialMediaLink: socialMediaLinkSchema,
+    rssSummarization: rssSummarizationSchema
 };

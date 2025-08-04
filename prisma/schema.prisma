@@ -411,6 +411,8 @@ model BugEvent {
   bug       Bug      @relation(fields: [bugId], references: [id])
 }
 
+
+
 enum Platform {
   WEB
   APP
