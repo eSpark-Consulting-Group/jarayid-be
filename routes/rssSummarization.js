@@ -3,7 +3,7 @@ import { Router } from "express";
 import schemas from "../schemas/index.js";
 import createValidationMiddleware from "../middleware/validate.js";
 import { RssSummarizationController } from "../controllers/index.js";
-import { /*auth*/ adminAuth } from "../middleware/index.js";
+import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
 const rssSummarizationController = new RssSummarizationController();
@@ -43,8 +43,8 @@ const validation = createValidationMiddleware(schemas);
  */
 router.post(
   "/",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.rssSummarization.createOrUpdate,
   rssSummarizationController.upsertSettings
 );
@@ -69,6 +69,6 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/", /*auth*/ /*adminAuth*/ rssSummarizationController.getSettings);
+router.get("/", auth, adminAuth, rssSummarizationController.getSettings);
 
 export default router;
