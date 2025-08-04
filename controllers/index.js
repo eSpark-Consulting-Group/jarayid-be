@@ -15,6 +15,7 @@ import VisualAdPlacementController from './visualAdPlacementController.js';
 import OpenAIKeyController from './openAIKeyController.js';
 import BugController from './bugController.js';
 import RssSummarizationController from './rssSummarizationController.js';
+import DashboardController from './dashboardController.js';
 
 export { 
     UserController, 
@@ -32,6 +33,7 @@ export {
     VisualAdPlacementController,
     OpenAIKeyController,
     BugController,
-    RssSummarizationController
+    RssSummarizationController,
+    DashboardController
 };
 export default UserController;

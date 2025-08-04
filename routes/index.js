@@ -18,6 +18,7 @@ import subscriptionsRouter from './subscriptions.js';
 import openAIKeyRoutes from './openAIKey.js';
 import bugRoutes from './bugs.js';
 import rssSummarizationRoutes from './rssSummarization.js';
+import dashboardRoutes from './dashboard.js';
 
 
 
@@ -70,5 +71,8 @@ router.use('/bugs', bugRoutes);
 
 // RSS Summarization related routes
 router.use('/rss-summarization', rssSummarizationRoutes);
+
+// Dashboard route
+router.use('/dashboard', dashboardRoutes);
 
 export default router;
