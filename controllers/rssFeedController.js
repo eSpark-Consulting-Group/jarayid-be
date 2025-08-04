@@ -166,12 +166,11 @@ class RSSFeedController {
 
             const paginatedResponse = pagination.createPaginatedResponse(
                 rssFeedsWithActiveStatus,
+                req.query,
                 total,
-                page,
-                limit,
                 {
-                    totalFeeds: total,
-                    currentPage: page
+                    defaultLimit: 10,
+                    maxLimit: 200
                 }
             );
 

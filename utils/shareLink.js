@@ -55,6 +55,15 @@ export const generateSocialShareLinks = (articleId, title = '', description = ''
     const encodedTitle = encodeURIComponent(title);
     const encodedDescription = encodeURIComponent(description);
     
+    // Website sharing URLs
+    const frontendUrl = baseUrl || PASSWORD_RESET_CONFIG.frontendUrl || 'http://localhost:3000';
+    const websiteUrl = frontendUrl.replace(/\/$/, '');
+    const encodedWebsiteUrl = encodeURIComponent(websiteUrl);
+    const websiteTitle = 'Jarayid News';
+    const encodedWebsiteTitle = encodeURIComponent(websiteTitle);
+    const websiteDescription = 'Your trusted source for news from around the world';
+    const encodedWebsiteDescription = encodeURIComponent(websiteDescription);
+    
     return {
         direct: articleUrl,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
@@ -64,7 +73,18 @@ export const generateSocialShareLinks = (articleId, title = '', description = ''
         telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
         email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%0A%0A${encodedUrl}`,
         tiktok: `https://www.tiktok.com/share?url=${encodedUrl}&text=${encodedTitle}`,
-        copy: articleUrl // For copy to clipboard functionality
+        copy: articleUrl, // For copy to clipboard functionality
+        
+        // Website sharing URLs
+        siteFacebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedWebsiteUrl}`,
+        siteTwitter: `https://twitter.com/intent/tweet?url=${encodedWebsiteUrl}&text=${encodedWebsiteTitle}`,
+        siteLinkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedWebsiteUrl}`,
+        siteWhatsapp: `https://wa.me/?text=${encodedWebsiteTitle}%20${encodedWebsiteUrl}`,
+        siteTelegram: `https://t.me/share/url?url=${encodedWebsiteUrl}&text=${encodedWebsiteTitle}`,
+        siteEmail: `mailto:?subject=${encodedWebsiteTitle}&body=${encodedWebsiteDescription}%0A%0A${encodedWebsiteUrl}`,
+        siteTiktok: `https://www.tiktok.com/share?url=${encodedWebsiteUrl}&text=${encodedWebsiteTitle}`,
+        siteDirect: websiteUrl,
+        siteCopy: websiteUrl
     };
 };
 
