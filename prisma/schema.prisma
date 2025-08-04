@@ -392,6 +392,15 @@ model Bug {
  
   events      BugEvent[]
 }
+
+model RssSummarizationSetting {
+  id        String   @id @default(uuid())
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  @@map("rss_summarization_settings")
+}
  
 model BugEvent {
   id        String   @id @default(uuid())

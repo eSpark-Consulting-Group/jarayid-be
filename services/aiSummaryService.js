@@ -316,7 +316,6 @@ class AISummaryService {
                         updateData.originalContent.rssTranslatedContent = translatedContent;
                     }
                 }
-
                 const updatedArticle = await prisma.article.update({
                     where: { id: article.id },
                     data: updateData
