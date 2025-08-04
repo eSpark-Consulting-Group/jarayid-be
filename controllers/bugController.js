@@ -52,7 +52,6 @@ class BugController {
           skip,
           take,
           orderBy: { createdAt: "desc" },
-          include: { events: true },
         }),
         prisma.bug.count({ where }),
       ]);
@@ -112,8 +111,6 @@ class BugController {
       if (!bug) {
         return response.error(res, "Bug not found", 404);
       }
-
-      await prisma.bugEvent.deleteMany({ where: { bugId: id } });
       await prisma.bug.delete({ where: { id } });
 
       return response.success(res, null, "Bug deleted successfully");
@@ -128,7 +125,6 @@ class BugController {
    */
   async clearAllBugs(req, res) {
     try {
-      await prisma.bugEvent.deleteMany();
       await prisma.bug.deleteMany();
 
       return response.success(res, null, "All bugs cleared successfully");
