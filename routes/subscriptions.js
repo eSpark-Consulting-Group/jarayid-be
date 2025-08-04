@@ -1,10 +1,9 @@
 import express from 'express';
-import SubscriptionController from '../controllers/subscriptionController.js';
+import subscriptionController from '../controllers/subscriptionController.js';
 import { auth, validate } from '../middleware/index.js';
 import schemas from '../schemas/index.js';
 
 const router = express.Router();
-const subscriptionController = new SubscriptionController();
 const validation = validate(schemas);
 
 /**
@@ -113,7 +112,7 @@ const validation = validate(schemas);
  *                     message:
  *                       type: string
  */
-router.get('/plans', subscriptionController.getPlans);
+router.get('/plans', subscriptionController.getPlans.bind(subscriptionController));
 
 /**
  * @swagger
@@ -163,7 +162,7 @@ router.get('/plans', subscriptionController.getPlans);
 router.post('/checkout', 
     auth, 
     validation.subscription.createCheckout, 
-    subscriptionController.createCheckout
+    subscriptionController.createCheckout.bind(subscriptionController)
 );
 
 /**
@@ -241,7 +240,7 @@ router.post('/checkout',
 router.post('/widget-checkout', 
     auth, 
     validation.subscription.createWidgetCheckout, 
-    subscriptionController.createWidgetCheckout
+    subscriptionController.createWidgetCheckout.bind(subscriptionController)
 );
 
 /**
@@ -291,7 +290,7 @@ router.post('/widget-checkout',
 router.post('/', 
     auth, 
     validation.subscription.createSubscription, 
-    subscriptionController.createSubscription
+    subscriptionController.createSubscription.bind(subscriptionController)
 );
 
 /**
@@ -323,7 +322,7 @@ router.post('/',
  *                     message:
  *                       type: string
  */
-router.get('/me', auth, subscriptionController.getUserSubscription);
+router.get('/me', auth, subscriptionController.getUserSubscription.bind(subscriptionController));
 
 /**
  * @swagger
@@ -372,7 +371,7 @@ router.post('/:subscriptionId/cancel',
     auth, 
     validation.subscription.params,
     validation.subscription.cancelSubscription, 
-    subscriptionController.cancelSubscription
+    subscriptionController.cancelSubscription.bind(subscriptionController)
 );
 
 /**
@@ -424,7 +423,7 @@ router.put('/:subscriptionId',
     auth, 
     validation.subscription.params,
     validation.subscription.updateSubscription, 
-    subscriptionController.updateSubscription
+    subscriptionController.updateSubscription.bind(subscriptionController)
 );
 
 /**
@@ -452,6 +451,6 @@ router.put('/:subscriptionId',
  *                 success:
  *                   type: boolean
  */
-router.post('/webhook', subscriptionController.handleWebhook);
+router.post('/webhook', subscriptionController.handleWebhook.bind(subscriptionController));
 
 export default router;
