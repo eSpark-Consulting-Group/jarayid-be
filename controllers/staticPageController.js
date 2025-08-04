@@ -2,6 +2,7 @@ import prisma from '../prisma/index.js';
 
 import { response, pagination } from "../utils/index.js";
 import { cloudinaryService } from "../services/index.js";
+import openaiService from '../services/openaiService.js';
 import winston from "winston";
 
 // Logger setup
@@ -26,10 +27,19 @@ const logger = winston.createLogger({
 class StaticPageController {
   constructor() {
     this.prisma = prisma;
+    
+    // Bind methods to preserve 'this' context
+    this.createStaticPage = this.createStaticPage.bind(this);
+    this.getAllStaticPages = this.getAllStaticPages.bind(this);
+    this.getStaticPageById = this.getStaticPageById.bind(this);
+    this.updateStaticPage = this.updateStaticPage.bind(this);
+    this.deleteStaticPage = this.deleteStaticPage.bind(this);
+    this.extractTextFromJSON = this.extractTextFromJSON.bind(this);
+    this.extractTranslatedField = this.extractTranslatedField.bind(this);
   }
 
   async createStaticPage(req, res) {
-    const { title, slug, content } = req.body;
+    const { title, slug, content, customFields, autoTranslate } = req.body;
 
     try {
       const existingPage = await prisma.staticPage.findFirst({
@@ -44,8 +54,80 @@ class StaticPageController {
         );
       }
 
+      const pageData = {
+        title,
+        slug,
+        content,
+        customFields: customFields || null
+      };
+
+      // Auto-generate translated content if OpenAI is available
+      if (openaiService.isAvailable()) {
+        try {
+          logger.info(`Starting auto-translation for new static page: ${title}`);
+          
+          // Prepare content for translation
+          let translationText = '';
+          if (title) {
+            translationText += `Title: ${title}\n`;
+          }
+          if (content) {
+            // Handle content based on its type (JSON or string)
+            let contentString = '';
+            if (typeof content === 'object') {
+              // If content is JSON, extract text fields for translation
+              contentString = this.extractTextFromJSON(content);
+            } else {
+              contentString = content;
+            }
+            if (contentString) {
+              translationText += `Content: ${contentString}\n`;
+            }
+          }
+
+          if (translationText.trim()) {
+            logger.info(`Translation text prepared for "${title}":`, { translationText });
+            const translationResult = await openaiService.translateContent(translationText, 'auto');
+            
+            logger.info(`Translation result for "${title}":`, { 
+              success: translationResult.success,
+              arabicContentLength: translationResult.arabicContent?.length || 0,
+              englishContentLength: translationResult.englishContent?.length || 0,
+              arabicContent: translationResult.arabicContent,
+              englishContent: translationResult.englishContent,
+              sourceLanguage: translationResult.sourceLanguage
+            });
+            
+            if (translationResult.success) {
+              pageData.translatedContent = {
+                arabic: {
+                  title: this.extractTranslatedField(translationResult.arabicContent, 'Title'),
+                  content: this.extractTranslatedField(translationResult.arabicContent, 'Content')
+                },
+                english: {
+                  title: this.extractTranslatedField(translationResult.englishContent, 'Title'),
+                  content: this.extractTranslatedField(translationResult.englishContent, 'Content')
+                },
+                translatedAt: translationResult.translatedAt,
+                sourceLanguage: translationResult.sourceLanguage
+              };
+
+              logger.info(`✅ Successfully translated new static page content: ${title}`);
+            } else {
+              logger.warn(`⚠️ Translation failed for new static page: ${title}`, { error: translationResult.error });
+            }
+          }
+        } catch (translationError) {
+          logger.error('Translation error during static page creation:', { 
+            error: translationError?.message || translationError,
+            pageTitle: title 
+          });
+          // Continue with creation even if translation fails
+        }
+      }
+
       const page = await prisma.staticPage.create({
-        data: { title, slug, content },
+        data: pageData,
       });
 
       return response.success(
@@ -185,7 +267,7 @@ class StaticPageController {
 
   async updateStaticPage(req, res) {
     const { id } = req.params;
-    const { title, slug, content } = req.body;
+    const { title, slug, content, customFields, autoTranslate } = req.body;
 
     try {
       const existingPage = await prisma.staticPage.findUnique({
@@ -209,9 +291,98 @@ class StaticPageController {
         }
       }
 
+      const updateData = {};
+      if (title !== undefined) updateData.title = title;
+      if (slug !== undefined) updateData.slug = slug;
+      if (content !== undefined) updateData.content = content;
+      if (customFields !== undefined) updateData.customFields = customFields;
+
+      // Handle auto-translation if OpenAI is available
+      if (openaiService.isAvailable()) {
+        try {
+          logger.info(`Starting auto-translation for static page: ${existingPage.title}`);
+          
+          const contentToTranslate = {
+            title: updateData.title || existingPage.title,
+            content: updateData.content || existingPage.content
+          };
+
+          // Prepare content for translation
+          let translationText = '';
+          if (contentToTranslate.title) {
+            translationText += `Title: ${contentToTranslate.title}\n`;
+          }
+          if (contentToTranslate.content) {
+            // Handle content based on its type (JSON or string)
+            let contentString = '';
+            if (typeof contentToTranslate.content === 'object') {
+              // If content is JSON, extract text fields for translation
+              contentString = this.extractTextFromJSON(contentToTranslate.content);
+            } else {
+              contentString = contentToTranslate.content;
+            }
+            if (contentString) {
+              translationText += `Content: ${contentString}\n`;
+            }
+          }
+
+          if (translationText.trim()) {
+            // Translate the content to Arabic and English
+            logger.info(`📝 Content to translate: ${translationText}`);
+            const translationResult = await openaiService.translateContent(translationText, 'auto');
+            
+            logger.info(`🔍 Translation result received:`, {
+              success: translationResult.success,
+              arabicContentLength: translationResult.arabicContent?.length || 0,
+              englishContentLength: translationResult.englishContent?.length || 0,
+              arabicContent: translationResult.arabicContent,
+              englishContent: translationResult.englishContent
+            });
+            
+            if (translationResult.success) {
+              const existingTranslatedContent = existingPage.translatedContent || {};
+              
+              // Extract fields with detailed logging
+              const arabicTitle = this.extractTranslatedField(translationResult.arabicContent, 'Title');
+              const arabicContent = this.extractTranslatedField(translationResult.arabicContent, 'Content');
+              const englishTitle = this.extractTranslatedField(translationResult.englishContent, 'Title');
+              const englishContent = this.extractTranslatedField(translationResult.englishContent, 'Content');
+              
+              logger.info(`🔎 Extracted fields:`, {
+                arabicTitle, arabicContent, englishTitle, englishContent
+              });
+              
+              updateData.translatedContent = {
+                ...existingTranslatedContent,
+                arabic: {
+                  title: arabicTitle,
+                  content: arabicContent
+                },
+                english: {
+                  title: englishTitle,
+                  content: englishContent
+                },
+                translatedAt: translationResult.translatedAt,
+                sourceLanguage: translationResult.sourceLanguage
+              };
+
+              logger.info(`✅ Successfully translated static page content for: ${existingPage.title}`);
+            } else {
+              logger.warn(`⚠️ Translation failed for static page: ${existingPage.title}`, { error: translationResult.error });
+            }
+          }
+        } catch (translationError) {
+          logger.error('Translation error during static page update:', { 
+            error: translationError?.message || translationError,
+            pageId: id 
+          });
+          // Continue with update even if translation fails
+        }
+      }
+
       const updatedPage = await prisma.staticPage.update({
         where: { id },
-        data: { title, slug, content },
+        data: updateData,
       });
 
       return response.success(
@@ -259,6 +430,95 @@ class StaticPageController {
       );
     }
   }
+
+  /**
+   * Helper method to extract text from JSON content
+   */
+  extractTextFromJSON(jsonContent) {
+    if (!jsonContent || typeof jsonContent !== 'object') return '';
+    
+    let textContent = '';
+    
+    const extractTextRecursively = (obj) => {
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const value = obj[key];
+          if (typeof value === 'string') {
+            textContent += `${value} `;
+          } else if (typeof value === 'object' && value !== null) {
+            extractTextRecursively(value);
+          }
+        }
+      }
+    };
+    
+    extractTextRecursively(jsonContent);
+    return textContent.trim();
+  }
+
+  /**
+   * Helper method to extract translated field from OpenAI response
+   */
+  extractTranslatedField(translatedText, fieldName) {
+    if (!translatedText) {
+      logger.warn(`No translated text provided for field: ${fieldName}`);
+      return null;
+    }
+    
+    // Log the translated text for debugging (truncated for readability)
+    const truncatedText = translatedText.length > 500 ? translatedText.substring(0, 500) + '...' : translatedText;
+    logger.info(`Extracting field "${fieldName}" from translated text:`, { truncatedText });
+    
+    // Try multiple regex patterns to match different response formats
+    const patterns = [
+      // Standard format: "FieldName: value"
+      new RegExp(`${fieldName}:\\s*(.+?)(?=\\n|$)`, 'i'),
+      // Quoted format: "FieldName: "value""
+      new RegExp(`${fieldName}:\\s*"([^"]+)"`, 'i'),
+      // Single quoted format: "FieldName: 'value'"
+      new RegExp(`${fieldName}:\\s*'([^']+)'`, 'i'),
+      // With extra text: "FieldName (Arabic): value"
+      new RegExp(`${fieldName}[^:]*:\\s*(.+?)(?=\\n|$)`, 'i'),
+      // Arabic format variations
+      new RegExp(`${fieldName}.*?:\\s*(.+?)(?=\\n|$)`, 'i'),
+      // Line-by-line search (more flexible)
+      new RegExp(`^.*${fieldName}.*?:\\s*(.+?)$`, 'mi'),
+      // Handle potential Unicode issues with Arabic
+      new RegExp(`${fieldName}[\\s\\u200B-\\u200D\\uFEFF]*:\\s*(.+?)(?=\\n|$)`, 'i')
+    ];
+    
+    for (let i = 0; i < patterns.length; i++) {
+      const regex = patterns[i];
+      const match = translatedText.match(regex);
+      if (match && match[1] && match[1].trim()) {
+        const extractedValue = match[1].trim().replace(/^["']|["']$/g, ''); // Remove quotes
+        if (extractedValue && extractedValue !== 'null' && extractedValue !== 'undefined') {
+          logger.info(`Successfully extracted "${fieldName}" using pattern ${i + 1}: ${extractedValue}`);
+          return extractedValue;
+        }
+      }
+    }
+    
+    // If no pattern worked, try to find any line containing the field name
+    const lines = translatedText.split('\n');
+    for (const line of lines) {
+      if (line.toLowerCase().includes(fieldName.toLowerCase()) && line.includes(':')) {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+          const value = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
+          if (value && value !== 'null' && value !== 'undefined') {
+            logger.info(`Successfully extracted "${fieldName}" from line: ${value}`);
+            return value;
+          }
+        }
+      }
+    }
+    
+    logger.warn(`Could not extract field "${fieldName}" from translated text. Available content: ${truncatedText}`);
+    return null;
+  }
 }
 
-export default StaticPageController;
+const staticPageController = new StaticPageController();
+
+export default staticPageController;

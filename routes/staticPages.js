@@ -1,12 +1,11 @@
 import { Router } from "express";
 
-import { StaticPageController } from "../controllers/index.js";
+import { staticPageController } from "../controllers/index.js";
 import schemas from "../schemas/index.js";
 import createValidationMiddleware from "../middleware/validate.js";
 import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
-const staticPageController = new StaticPageController();
 const validation = createValidationMiddleware(schemas);
 
 /**

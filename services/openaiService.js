@@ -288,30 +288,32 @@ Requirements:
 
       // Create translation prompts
       const englishPrompt = `
-Please translate the following text to clear, natural English. If the text is already in English, improve its clarity and grammar while preserving the original meaning.
+Please translate the following structured text to clear, natural English. Preserve the field labels and structure exactly as shown. If any field is already in English, improve its clarity and grammar while preserving the original meaning.
 
 Text to translate:
 ${processedContent}
 
 Requirements:
-- Provide a clear, natural English translation
-- Preserve the original meaning and context
-- Use proper grammar and sentence structure
-- Return only the translated text, no explanations
+- Keep the exact field labels (like "Name:", "SEO Title:", etc.)
+- Translate only the values after the colons
+- Preserve the line-by-line structure
+- Use proper grammar and sentence structure for the values
+- Return the text in the exact same format with field labels preserved
 `;
 
       const arabicPrompt = `
-Please translate the following text to clear, natural Arabic. If the text is already in Arabic, improve its clarity and grammar while preserving the original meaning.
+Please translate the following structured text to clear, natural Arabic. Preserve the field labels in English and structure exactly as shown. If any field is already in Arabic, improve its clarity and grammar while preserving the original meaning.
 
 Text to translate:
 ${processedContent}
 
 Requirements:
-- Provide a clear, natural Arabic translation
-- Preserve the original meaning and context
-- Use proper Arabic grammar and sentence structure
-- Return only the translated text, no explanations
+- Keep the exact field labels in English (like "Name:", "SEO Title:", etc.)
+- Translate only the values after the colons to Arabic
+- Preserve the line-by-line structure
+- Use proper Arabic grammar and sentence structure for the values
 - Write in modern standard Arabic
+- Return the text in the exact same format with English field labels preserved
 `;
 
       // Execute translations in parallel

@@ -50,6 +50,8 @@ model Category {
   description     String?
   seoMeta         Json
   thresholdDays   Int
+  translatedContent Json?          // Optional translated content
+  customFields    Json?            // Optional custom fields
   createdById     String
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -166,6 +168,8 @@ model StaticPage {
   title     String   @unique
   content   Json?
   slug      String   @unique
+  translatedContent Json?  // Optional translated content
+  customFields    Json?    // Optional custom fields
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

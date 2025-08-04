@@ -2,11 +2,10 @@ import { Router } from 'express';
 
 import schemas from '../schemas/index.js';
 import createValidationMiddleware from '../middleware/validate.js';
-import { CategoryController } from '../controllers/index.js';
+import { categoryController } from '../controllers/index.js';
 import { auth, adminAuth, singleUpload } from '../middleware/index.js';
 
 const router = Router();
-const categoryController = new CategoryController();
 const validation = createValidationMiddleware(schemas);
 
 /**
