@@ -260,43 +260,12 @@ class SubscriptionController {
     }
 
     /**
-     * Get subscription plans/prices
+     * Get subscription plans/prices from Paddle API
      */
     async getPlans(req, res) {
         try {
-            // This would typically come from your configuration or Paddle API
-            const plans = [
-                {
-                    id: 'monthly_premium',
-                    name: 'Premium Monthly',
-                    priceId: process.env.PADDLE_MONTHLY_PRICE_ID,
-                    interval: 'MONTHLY',
-                    price: 9.99,
-                    currency: 'USD',
-                    features: [
-                        'Unlimited articles',
-                        'AI summaries',
-                        'Priority support',
-                        'No ads'
-                    ]
-                },
-                {
-                    id: 'yearly_premium',
-                    name: 'Premium Yearly',
-                    priceId: process.env.PADDLE_YEARLY_PRICE_ID,
-                    interval: 'YEARLY',
-                    price: 99.99,
-                    currency: 'USD',
-                    savings: '17%',
-                    features: [
-                        'Unlimited articles',
-                        'AI summaries',
-                        'Priority support',
-                        'No ads',
-                        '2 months free'
-                    ]
-                }
-            ];
+            // Fetch plans from Paddle API
+            const plans = await this.fetchPlansFromPaddle();
 
             return successResponse(res, {
                 plans,
@@ -307,6 +276,203 @@ class SubscriptionController {
             logger.error('Error getting plans:', error);
             return errorResponse(res, error.message, 500);
         }
+    }
+
+    /**
+     * Fetch products and prices from Paddle API
+     */
+    async fetchPlansFromPaddle() {
+        try {
+            const { paddle } = await import('../config/paddle.js');
+
+            // Fetch products from Paddle
+            const productsResponse = await fetch('https://sandbox-api.paddle.com/products', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${process.env.PADDLE_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!productsResponse.ok) {
+                throw new Error(`Failed to fetch products: ${productsResponse.status} ${productsResponse.statusText}`);
+            }
+
+            const productsData = await productsResponse.json();
+
+            // Fetch prices from Paddle
+            const pricesResponse = await fetch('https://sandbox-api.paddle.com/prices', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${process.env.PADDLE_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!pricesResponse.ok) {
+                throw new Error(`Failed to fetch prices: ${pricesResponse.status} ${pricesResponse.statusText}`);
+            }
+
+            const pricesData = await pricesResponse.json();
+
+            // Map products with their prices
+            const plans = productsData.data.map(product => {
+                // Find all prices for this product
+                const productPrices = pricesData.data.filter(price => price.product_id === product.id);
+
+                // Group prices by billing cycle
+                const pricesByInterval = productPrices.reduce((acc, price) => {
+                    let interval = 'ONE_TIME';
+                    
+                    if (price.billing_cycle) {
+                        interval = price.billing_cycle.interval.toUpperCase();
+                        if (price.billing_cycle.frequency > 1) {
+                            interval = `${price.billing_cycle.frequency}_${interval}S`;
+                        } else {
+                            interval = interval === 'MONTH' ? 'MONTHLY' : 
+                                     interval === 'YEAR' ? 'YEARLY' : interval;
+                        }
+                    }
+
+                    acc[interval] = {
+                        id: price.id,
+                        name: price.name,
+                        description: price.description,
+                        amount: parseFloat(price.unit_price.amount) / 100, // Convert from cents
+                        currency: price.unit_price.currency_code,
+                        interval: interval,
+                        billingCycle: price.billing_cycle,
+                        quantity: price.quantity,
+                        status: price.status,
+                        createdAt: price.created_at,
+                        updatedAt: price.updated_at
+                    };
+
+                    return acc;
+                }, {});
+
+                // Calculate savings for yearly vs monthly (if both exist)
+                let savings = null;
+                if (pricesByInterval.YEARLY && pricesByInterval.MONTHLY) {
+                    const yearlyMonthly = pricesByInterval.YEARLY.amount / 12;
+                    const monthlyPrice = pricesByInterval.MONTHLY.amount;
+                    const savingsPercent = Math.round(((monthlyPrice - yearlyMonthly) / monthlyPrice) * 100);
+                    if (savingsPercent > 0) {
+                        savings = `${savingsPercent}%`;
+                    }
+                }
+
+                // Extract features from custom_data
+                let features = [];
+                if (product.custom_data && product.custom_data.features) {
+                    features = Object.entries(product.custom_data.features)
+                        .filter(([key, value]) => value === true)
+                        .map(([key, value]) => this.formatFeatureName(key));
+                }
+
+                // Add suggested addons if available
+                let suggestedAddons = [];
+                if (product.custom_data && product.custom_data.suggested_addons) {
+                    suggestedAddons = product.custom_data.suggested_addons;
+                }
+
+                return {
+                    id: product.id,
+                    name: product.name,
+                    description: product.description,
+                    imageUrl: product.image_url,
+                    type: product.type,
+                    status: product.status,
+                    taxCategory: product.tax_category,
+                    customData: product.custom_data,
+                    prices: pricesByInterval,
+                    features,
+                    suggestedAddons,
+                    savings,
+                    upgradeDescription: product.custom_data?.upgrade_description || null,
+                    createdAt: product.created_at,
+                    updatedAt: product.updated_at
+                };
+            });
+
+            // Filter only active products and sort by creation date
+            const activePlans = plans
+                .filter(plan => plan.status === 'active')
+                .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+            logger.info(`Successfully fetched ${activePlans.length} active plans from Paddle`);
+
+            return activePlans;
+
+        } catch (error) {
+            logger.error('Error fetching plans from Paddle:', error);
+            
+            // Fallback to hardcoded plans if Paddle API fails
+            logger.warn('Falling back to hardcoded plans due to Paddle API error');
+            return this.getFallbackPlans();
+        }
+    }
+
+    /**
+     * Format feature name from snake_case to readable format
+     */
+    formatFeatureName(featureName) {
+        return featureName
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
+    /**
+     * Fallback plans in case Paddle API is unavailable
+     */
+    getFallbackPlans() {
+        return [
+            {
+                id: 'fallback_monthly',
+                name: 'Premium Monthly',
+                description: 'Monthly premium subscription with all features',
+                type: 'standard',
+                status: 'active',
+                prices: {
+                    MONTHLY: {
+                        id: process.env.PADDLE_MONTHLY_PRICE_ID || 'monthly_fallback',
+                        amount: 9.99,
+                        currency: 'USD',
+                        interval: 'MONTHLY'
+                    }
+                },
+                features: [
+                    'Unlimited articles',
+                    'AI summaries',
+                    'Priority support',
+                    'No ads'
+                ]
+            },
+            {
+                id: 'fallback_yearly',
+                name: 'Premium Yearly',
+                description: 'Yearly premium subscription with all features and savings',
+                type: 'standard',
+                status: 'active',
+                prices: {
+                    YEARLY: {
+                        id: process.env.PADDLE_YEARLY_PRICE_ID || 'yearly_fallback',
+                        amount: 99.99,
+                        currency: 'USD',
+                        interval: 'YEARLY'
+                    }
+                },
+                features: [
+                    'Unlimited articles',
+                    'AI summaries',
+                    'Priority support',
+                    'No ads',
+                    '2 months free'
+                ],
+                savings: '17%'
+            }
+        ];
     }
 
     /**
@@ -380,4 +546,4 @@ class SubscriptionController {
     }
 }
 
-export default SubscriptionController;
+export default new SubscriptionController();
