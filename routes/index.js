@@ -17,6 +17,7 @@ import sponsorAccountRoutes from './sponsorAccount.js';
 import subscriptionsRouter from './subscriptions.js';
 import openAIKeyRoutes from './openAIKey.js';
 import bugRoutes from './bugs.js';
+import rssSummarizationRoutes from './rssSummarization.js';
 
 
 
@@ -66,5 +67,8 @@ router.use('/api-key', openAIKeyRoutes);
 
 // Bug related routes
 router.use('/bugs', bugRoutes);
+
+// RSS Summarization related routes
+router.use('/rss-summarization', rssSummarizationRoutes);
 
 export default router;
