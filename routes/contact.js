@@ -3,7 +3,7 @@ import { Router } from "express";
 import schemas from "../schemas/index.js";
 import createValidationMiddleware from "../middleware/validate.js";
 import { ContactController } from "../controllers/index.js";
-import { /*auth*/ adminAuth } from "../middleware/index.js";
+import { auth, adminAuth } from "../middleware/index.js";
 import optionalAuth from "../middleware/optionalAuth.js";
 
 const router = Router();
@@ -137,7 +137,7 @@ router.post(
  *         description: Contacts not found
  */
 
-router.get("/", /*auth*/ /*adminAuth*/ contactController.getAllContacts);
+router.get("/", auth, adminAuth, contactController.getAllContacts);
 
 /**
  * @swagger
@@ -172,8 +172,8 @@ router.get("/", /*auth*/ /*adminAuth*/ contactController.getAllContacts);
  */
 router.get(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.contactUs.params,
   contactController.getContactById
 );
@@ -218,8 +218,8 @@ router.get(
  */
 router.delete(
   "/:id",
-  /*auth*/
-  /*adminAuth*/
+  auth,
+  adminAuth,
   validation.contactUs.params,
   contactController.deleteContact
 );
