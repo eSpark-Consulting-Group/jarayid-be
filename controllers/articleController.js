@@ -182,6 +182,12 @@ class ArticleController {
             where.summaryArabic != null;
             where.summaryEnglish !=null;
             
+            // Ensure originalContent has scrapedContent object
+            where.originalContent = {
+                path: ['scrapedContent'],
+                not: null
+            };
+            
             // Status filter - support both boolean and string values
             if (status !== undefined) {
                 if (status === 'true' || status === true) {

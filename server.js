@@ -48,6 +48,42 @@ if (configs.NODE_ENV !== 'production') {
     }));
 }
 
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('❌ Unhandled Rejection at:', { 
+        exception: { 
+            error: reason instanceof Error ? {
+                message: reason.message,
+                stack: reason.stack,
+                name: reason.name,
+                http_code: reason.http_code || 500
+            } : reason
+        }
+    });
+    // Don't exit the process in production, just log it
+    if (configs.NODE_ENV !== 'production') {
+        console.log('Reason:', reason);
+        console.log('Promise:', promise);
+    }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logger.error('❌ Uncaught Exception:', { 
+        exception: { 
+            error: {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            }
+        }
+    });
+    // In production, we might want to restart the process
+    if (configs.NODE_ENV === 'production') {
+        process.exit(1);
+    }
+});
+
 const app = express();
 
 // Middleware

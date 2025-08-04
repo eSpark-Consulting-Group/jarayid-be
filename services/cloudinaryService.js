@@ -22,7 +22,7 @@ class CloudinaryService {
             // Generate unique key
             const uniqueKey = `${Date.now()}-${uuidv4()}`;
             const publicId = `${CLOUD_CONFIG.folder}/${folder}/${uniqueKey}`;
-            
+
             return new Promise((resolve, reject) => {
                 cloudinary.uploader.upload_stream(
                     {
@@ -68,8 +68,9 @@ class CloudinaryService {
         try {
             const uniqueKey = `${Date.now()}-${uuidv4()}`;
             const publicId = `${CLOUD_CONFIG.folder}/${folder}/${uniqueKey}`;
-            
-            return new Promise((resolve, reject) => {
+
+            // Add timeout wrapper
+            const uploadPromise = new Promise((resolve, reject) => {
                 cloudinary.uploader.upload_stream(
                     {
                         public_id: publicId,
@@ -99,6 +100,16 @@ class CloudinaryService {
                     }
                 ).end(fileBuffer);
             });
+
+            // Add 30-second timeout
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('Cloudinary upload timeout after 30 seconds'));
+                }, 30000);
+            });
+
+            return await Promise.race([uploadPromise, timeoutPromise]);
+            
         } catch (error) {
             throw new Error(`Image upload failed: ${error.message}`);
         }
@@ -157,7 +168,7 @@ class CloudinaryService {
             quality: 'auto:good',
             fetch_format: 'auto'
         };
-        
+
         const transformations = { ...defaultOptions, ...options };
         return cloudinary.url(publicId, transformations);
     }
