@@ -78,6 +78,7 @@ const corsOptions = {
             'https://jarayid.esparkconsultants.com/',
             'https://www.jarayid.esparkconsultants.com',
             'https://www.jarayid.esparkconsultants.com/',
+            'https://jarayid-api.stg.esparkconsultants.com/',
             // Add staging/development domains
             'https://jarayid-frontend.vercel.app',
             'https://jarayid-frontend.netlify.app',

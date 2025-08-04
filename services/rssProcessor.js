@@ -210,26 +210,49 @@ class RSSProcessor {
             // Extract and prepare article data
             const articleData = await this.extractArticleData(item, rssFeed, feedData);
 
-            // Create article in database
-            const article = await prisma.article.create({
-                data: articleData,
-                include: {
-                    category: {
-                        select: {
-                            id: true,
-                            name: true,
-                            type: true
-                        }
-                    },
-                    author: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true
+            // Log article data before creation for debugging
+            logger.debug('Creating article with data:', {
+                title: articleData.title.substring(0, 50) + '...',
+                titleLength: articleData.title.length,
+                urlLength: articleData.url ? articleData.url.length : 0,
+                sourceLength: articleData.source.length,
+                originalContentSize: JSON.stringify(articleData.originalContent).length
+            });
+
+            // Create article in database with enhanced error handling
+            let article;
+            try {
+                article = await prisma.article.create({
+                    data: articleData,
+                    include: {
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                type: true
+                            }
+                        },
+                        author: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
                         }
                     }
-                }
-            });
+                });
+            } catch (dbError) {
+                logger.error('Database error creating article:', {
+                    error: dbError.message,
+                    title: articleData.title,
+                    titleLength: articleData.title.length,
+                    url: articleData.url,
+                    urlLength: articleData.url ? articleData.url.length : 0,
+                    sourceLength: articleData.source.length,
+                    originalContentSize: JSON.stringify(articleData.originalContent).length
+                });
+                throw dbError;
+            }
 
             return {
                 success: true,
@@ -260,6 +283,17 @@ class RSSProcessor {
         const url = item.url || null;
         const source = feedData.title || rssFeed.name || 'Unknown Source';
 
+        // Log data lengths for debugging
+        if (title.length > 450) {
+            logger.warn(`Long title detected: ${title.length} chars`, { title: title.substring(0, 50) + '...' });
+        }
+        if (url && url.length > 450) {
+            logger.warn(`Long URL detected: ${url.length} chars`, { url: url.substring(0, 100) + '...' });
+        }
+        if (source.length > 450) {
+            logger.warn(`Long source detected: ${source.length} chars`, { source: source.substring(0, 50) + '...' });
+        }
+
         // Extract content
         const originalContent = {
             text: this.cleanText(item.content_text || ''),
@@ -270,6 +304,24 @@ class RSSProcessor {
             rss_id: item.id || null,
             language: feedData.language || 'en'
         };
+
+        // Check originalContent size (JSON serialized)
+        const originalContentStr = JSON.stringify(originalContent);
+        if (originalContentStr.length > 50000) { // 50KB limit for JSON content
+            logger.warn(`Large originalContent detected: ${originalContentStr.length} chars`, { 
+                title: title.substring(0, 50) + '...',
+                textLength: originalContent.text.length,
+                htmlLength: originalContent.html.length
+            });
+            
+            // Truncate content if too large
+            if (originalContent.text.length > 25000) {
+                originalContent.text = originalContent.text.substring(0, 25000) + '... [truncated]';
+            }
+            if (originalContent.html.length > 25000) {
+                originalContent.html = originalContent.html.substring(0, 25000) + '... [truncated]';
+            }
+        }
 
         // No summary generation during RSS processing - AI will handle this later
         let summaryEnglish = null;
@@ -317,9 +369,9 @@ class RSSProcessor {
         const systemUser = await this.getSystemUser();
 
         return {
-            title: title.substring(0, 500), // Ensure it fits varchar(500)
-            url,
-            source: source.substring(0, 500),
+            title: this.truncateString(title, 500), // Ensure it fits varchar(500)
+            url: url ? this.truncateString(url, 500) : null, // Ensure URL also fits varchar(500)
+            source: this.truncateString(source, 500),
             originalContent,
             summaryEnglish,
             summaryArabic,
@@ -677,6 +729,22 @@ class RSSProcessor {
             logger.error('Error processing all RSS feeds:', { error: error.message, stack: error.stack });
             throw error;
         }
+    }
+
+    /**
+     * Safely truncate string to maximum length
+     * @param {string} str - String to truncate
+     * @param {number} maxLength - Maximum allowed length
+     * @returns {string} Truncated string
+     */
+    truncateString(str, maxLength) {
+        if (!str) return str;
+        if (str.length <= maxLength) return str;
+        
+        // Log when truncation occurs
+        logger.warn(`Truncating string from ${str.length} to ${maxLength} chars: "${str.substring(0, 50)}..."`);
+        
+        return str.substring(0, maxLength);
     }
 }
 

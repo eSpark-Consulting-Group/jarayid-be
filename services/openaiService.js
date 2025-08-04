@@ -252,6 +252,249 @@ Requirements:
   }
 
   /**
+   * Translate text content to Arabic and English
+   * @param {string} content - Text content to translate
+   * @param {string} sourceLanguage - Source language ('auto', 'en', 'ar', etc.)
+   * @returns {Promise<Object>} Translation results
+   */
+  async translateContent(content, sourceLanguage = 'auto') {
+    if (!this.isAvailable()) {
+      logger.warn('⚠️ OpenAI service not available for translation');
+      return {
+        success: false,
+        error: 'OpenAI service not available',
+        originalContent: content,
+        englishContent: null,
+        arabicContent: null
+      };
+    }
+
+    if (!content || content.trim().length === 0) {
+      logger.warn('⚠️ No content provided for translation');
+      return {
+        success: false,
+        error: 'No content provided',
+        originalContent: content,
+        englishContent: null,
+        arabicContent: null
+      };
+    }
+
+    try {
+      logger.info(`🌐 Translating content (${content.length} chars) from ${sourceLanguage}`);
+
+      // Prepare content for translation (limit to reasonable size)
+      const processedContent = this.preprocessContentForAI(content, 3000); // Shorter for translation
+
+      // Create translation prompts
+      const englishPrompt = `
+Please translate the following text to clear, natural English. If the text is already in English, improve its clarity and grammar while preserving the original meaning.
+
+Text to translate:
+${processedContent}
+
+Requirements:
+- Provide a clear, natural English translation
+- Preserve the original meaning and context
+- Use proper grammar and sentence structure
+- Return only the translated text, no explanations
+`;
+
+      const arabicPrompt = `
+Please translate the following text to clear, natural Arabic. If the text is already in Arabic, improve its clarity and grammar while preserving the original meaning.
+
+Text to translate:
+${processedContent}
+
+Requirements:
+- Provide a clear, natural Arabic translation
+- Preserve the original meaning and context
+- Use proper Arabic grammar and sentence structure
+- Return only the translated text, no explanations
+- Write in modern standard Arabic
+`;
+
+      // Execute translations in parallel
+      const [englishResult, arabicResult] = await Promise.all([
+        this.callOpenAI(englishPrompt, {
+          maxTokens: Math.min(1000, Math.ceil(processedContent.length * 0.8)),
+          temperature: 0.3
+        }),
+        this.callOpenAI(arabicPrompt, {
+          maxTokens: Math.min(1000, Math.ceil(processedContent.length * 0.8)),
+          temperature: 0.3
+        })
+      ]);
+
+      const englishContent = englishResult?.trim();
+      const arabicContent = arabicResult?.trim();
+
+      // Validate translations
+      if (!englishContent || englishContent.length < 10) {
+        logger.warn('⚠️ English translation failed or too short');
+        return {
+          success: false,
+          error: 'English translation failed',
+          originalContent: content,
+          englishContent: null,
+          arabicContent: arabicContent
+        };
+      }
+
+      if (!arabicContent || arabicContent.length < 10) {
+        logger.warn('⚠️ Arabic translation failed or too short');
+        return {
+          success: false,
+          error: 'Arabic translation failed',
+          originalContent: content,
+          englishContent: englishContent,
+          arabicContent: null
+        };
+      }
+
+      logger.info(`✅ Translation completed: EN(${englishContent.length} chars), AR(${arabicContent.length} chars)`);
+
+      return {
+        success: true,
+        originalContent: content,
+        englishContent,
+        arabicContent,
+        sourceLanguage: sourceLanguage,
+        translatedAt: new Date().toISOString()
+      };
+
+    } catch (error) {
+      logger.error('❌ Translation error:', { 
+        error: error.message,
+        contentLength: content.length,
+        sourceLanguage 
+      });
+
+      return {
+        success: false,
+        error: error.message,
+        originalContent: content,
+        englishContent: null,
+        arabicContent: null
+      };
+    }
+  }
+
+  /**
+   * Detect the primary language of content
+   * @param {string} content - Text content to analyze
+   * @returns {Promise<string>} Detected language code
+   */
+  async detectLanguage(content) {
+    if (!this.isAvailable() || !content || content.trim().length < 20) {
+      return 'auto';
+    }
+
+    try {
+      const prompt = `
+Analyze the following text and determine its primary language. Respond with only the language code:
+- 'en' for English
+- 'ar' for Arabic
+- 'auto' if mixed or uncertain
+
+Text:
+${content.substring(0, 200)}
+`;
+
+      const result = await this.callOpenAI(prompt, {
+        maxTokens: 10,
+        temperature: 0.1
+      });
+
+      const detectedLang = result?.trim().toLowerCase();
+      return ['en', 'ar'].includes(detectedLang) ? detectedLang : 'auto';
+
+    } catch (error) {
+      logger.warn('⚠️ Language detection failed:', { error: error.message });
+      return 'auto';
+    }
+  }
+
+  /**
+   * Preprocess content for AI processing with length limit
+   * @param {string} content - Raw content
+   * @param {number} maxLength - Maximum length limit
+   * @returns {string} Processed content
+   */
+  preprocessContentForAI(content, maxLength = 2500) {
+    if (!content) return "";
+
+    // First clean the content
+    const cleaned = this.cleanContent(content);
+    
+    // If already within limit, return as is
+    if (cleaned.length <= maxLength) {
+      return cleaned;
+    }
+
+    // Truncate while trying to preserve sentence boundaries
+    const truncated = cleaned.substring(0, maxLength);
+    const lastSentence = truncated.lastIndexOf('.');
+    const lastSpace = truncated.lastIndexOf(' ');
+
+    // Try to break at sentence boundary if reasonably close to limit
+    if (lastSentence > maxLength * 0.8) {
+      return truncated.substring(0, lastSentence + 1);
+    } 
+    // Otherwise break at word boundary
+    else if (lastSpace > maxLength * 0.9) {
+      return truncated.substring(0, lastSpace);
+    } 
+    // Last resort: hard truncate
+    else {
+      return truncated;
+    }
+  }
+
+  /**
+   * Call OpenAI API with common configuration
+   * @param {string} prompt - Prompt to send
+   * @param {Object} options - Additional options
+   * @returns {Promise<string>} AI response
+   */
+  async callOpenAI(prompt, options = {}) {
+    if (!this.isEnabled) {
+      throw new Error('OpenAI service not available');
+    }
+
+    const {
+      maxTokens = OPENAI_CONFIG.maxTokens,
+      temperature = OPENAI_CONFIG.temperature,
+      model = OPENAI_CONFIG.model
+    } = options;
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: maxTokens,
+        temperature,
+      });
+
+      return response.choices[0]?.message?.content?.trim() || null;
+    } catch (error) {
+      logger.error('❌ OpenAI API call failed:', { 
+        error: error.message,
+        promptLength: prompt.length,
+        model,
+        maxTokens,
+        temperature
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Check if OpenAI service is available
    * @returns {boolean} Service availability
    */

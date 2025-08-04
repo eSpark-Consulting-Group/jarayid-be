@@ -5,5 +5,6 @@ import pagination from './pagination.js';
 import { generateHashedPassword } from './password.js';
 import RSSFeedChecker from './rssFeedChecker.js';
 import shareLink from './shareLink.js';
+import youtubeUtils from './youtubeUtils.js';
 
-export { response, generateToken, pagination, generateHashedPassword, RSSFeedChecker, shareLink };
+export { response, generateToken, pagination, generateHashedPassword, RSSFeedChecker, shareLink, youtubeUtils };

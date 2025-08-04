@@ -76,8 +76,6 @@ router.post(
  *   get:
  *     summary: Get all static pages with optional filters
  *     tags: [StaticPages]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: search
@@ -170,7 +168,7 @@ router.post(
 
 
 // GET /static-pages (Public)
-router.get("/", auth, validation.staticPage.query, staticPageController.getAllStaticPages);
+router.get("/",  validation.staticPage.query, staticPageController.getAllStaticPages);
 
 /**
  * @swagger
@@ -178,8 +176,6 @@ router.get("/", auth, validation.staticPage.query, staticPageController.getAllSt
  *   get:
  *     summary: Get a static page by its ID
  *     tags: [StaticPages]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -215,7 +211,6 @@ router.get("/", auth, validation.staticPage.query, staticPageController.getAllSt
 // GET /static-pages/:id (Public)
 router.get(
   "/:id",
-  auth,
   validation.staticPage.params,
   staticPageController.getStaticPageById
 );
