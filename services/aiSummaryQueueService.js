@@ -2,6 +2,7 @@ import Bull from 'bull';
 import winston from 'winston';
 import { REDIS_CONFIG, RSS_PROCESSING_CONFIG } from '../config/config.js';
 import aiSummaryService from './aiSummaryService.js';
+import { logBug } from '../utils/logger.js';
 
 // Logger configuration
 const logger = winston.createLogger({
@@ -69,6 +70,12 @@ class AISummaryQueueService {
 
         } catch (error) {
             logger.error('❌ Failed to initialize AI Summary Queue:', { error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Failed to initialize AI Summary Queue: ${error.message}`,
+            });
             throw error;
         }
     }
@@ -91,10 +98,22 @@ class AISummaryQueueService {
                 error: err.message,
                 attempts: job.attemptsMade
             });
+            logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `AI summary job ${job.id} failed: ${err.message}`,
+            });
         });
 
         this.queue.on('stalled', (job) => {
             logger.warn(`⚠️ AI summary job ${job.id} stalled`, { jobId: job.id });
+            logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'warn',
+                description: `AI summary job ${job.id} stalled`,
+            });
         });
 
         this.queue.on('progress', (job, progress) => {
@@ -126,6 +145,12 @@ class AISummaryQueueService {
             logger.info(`🔄 AI summary recurring job scheduled with cron: ${cronSchedule}`);
         } catch (error) {
             logger.error('❌ Failed to add recurring AI summary job:', { error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Failed to add recurring AI summary job: ${error.message}`,
+            });
             throw error;
         }
     }
@@ -187,6 +212,12 @@ class AISummaryQueueService {
                 error: error.message,
                 stack: error.stack
             });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `AI summary job ${job.id} failed: ${error.message}`,
+            });
             throw error;
         }
     }
@@ -239,6 +270,12 @@ class AISummaryQueueService {
 
         } catch (error) {
             logger.error('❌ Failed to add immediate AI summary job:', { error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Failed to add immediate AI summary job: ${error.message}`,
+            });
             throw error;
         }
     }
@@ -272,6 +309,12 @@ class AISummaryQueueService {
 
         } catch (error) {
             logger.error('❌ Failed to get AI summary queue stats:', { error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Failed to get AI summary queue stats: ${error.message}`,
+            });
             return { error: error.message };
         }
     }
@@ -309,6 +352,12 @@ class AISummaryQueueService {
             };
         } catch (error) {
             logger.error('Error getting job status:', { jobId, error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Error getting job status for ${jobId}: ${error.message}`,
+            });
             return null;
         }
     }
@@ -359,6 +408,12 @@ class AISummaryQueueService {
             }));
         } catch (error) {
             logger.error('Error getting recent jobs:', { status, limit, error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Error getting recent jobs for status ${status}: ${error.message}`,
+            });
             return [];
         }
     }
@@ -386,6 +441,12 @@ class AISummaryQueueService {
 
         } catch (error) {
             logger.error('❌ Failed to clean AI summary queue:', { error: error.message });
+            await logBug({
+                type: 'Queue',
+                category: 'AI Summary',
+                level: 'error',
+                description: `Failed to clean AI summary queue: ${error.message}`,
+            });
             throw error;
         }
     }

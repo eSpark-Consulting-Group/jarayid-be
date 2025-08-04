@@ -13,7 +13,8 @@ import ExternalLinkController from './externalLinkController.js';
 import CookieController from './cookieController.js';
 import VisualAdPlacementController from './visualAdPlacementController.js';
 import OpenAIKeyController from './openAIKeyController.js';
-
+import BugController from './bugController.js';
+import RssSummarizationController from './rssSummarizationController.js';
 
 export { 
     UserController, 
@@ -29,7 +30,8 @@ export {
     ExternalLinkController,
     CookieController,
     VisualAdPlacementController,
-    OpenAIKeyController
-
+    OpenAIKeyController,
+    BugController,
+    RssSummarizationController
 };
 export default UserController;

@@ -13,6 +13,21 @@ import { auth, adminAuth, upload, validate } from './middleware/index.js';
 import schemas from './schemas/index.js';
 import apiRouter from './routes/index.js';
 import { rssQueueService, aiSummaryQueueService, trialService } from './services/index.js';
+import { errorHandler } from './middleware/index.js';
+import logError from "./utils/logger.js";
+
+const originalConsoleError = console.error;
+console.error = async (...args) => {
+  originalConsoleError(...args);
+
+  const [message, meta] = args;
+  await logError(
+    typeof message === "string" ? message : JSON.stringify(message),
+    meta instanceof Error
+      ? { stack: meta.stack, errorCode: meta.name }
+      : meta || {}
+  );
+};
 
 const validation = validate(schemas);
 const { singleUpload, multiUpload } = upload;
@@ -136,10 +151,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', apiRouter);
 
 // Global error handling middleware
-app.use((err, req, res, next) => {
-    logger.error(err.stack);
-    response.error(res, 'Internal server error', 500, err.message);
-});
+app.use(errorHandler);
 
 // Start server
 const PORT = configs.PORT || 3000;
