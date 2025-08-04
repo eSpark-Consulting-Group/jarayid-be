@@ -41,6 +41,16 @@ const staticPageSchema = {
       .label("content")
       .messages({...messages, 'content.invalid': 'Content must be valid JSON'})
       .required(),
+
+    customFields: Joi.object()
+      .label("customFields")
+      .messages(messages)
+      .optional(),
+
+    autoTranslate: Joi.boolean()
+      .label("autoTranslate")
+      .messages(messages)
+      .optional(),
   }),
 
   update: Joi.object({
@@ -67,6 +77,16 @@ const staticPageSchema = {
       )
       .label("content")
       .messages({...messages, 'content.invalid': 'Content must be valid JSON'}),
+
+    customFields: Joi.object()
+      .label("customFields")
+      .messages(messages)
+      .optional(),
+
+    autoTranslate: Joi.boolean()
+      .label("autoTranslate")
+      .messages(messages)
+      .optional(),
   }),
 
   params: Joi.object({

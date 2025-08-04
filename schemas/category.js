@@ -42,6 +42,12 @@ const categorySchema = {
             .max(365)
             .default(7)
             .messages(messages)
+            .optional(),
+        customFields: Joi.object()
+            .messages(messages)
+            .optional(),
+        autoTranslate: Joi.boolean()
+            .messages(messages)
             .optional()
     }),
     
@@ -72,6 +78,12 @@ const categorySchema = {
             .integer()
             .min(1)
             .max(365)
+            .messages(messages)
+            .optional(),
+        customFields: Joi.object()
+            .messages(messages)
+            .optional(),
+        autoTranslate: Joi.boolean()
             .messages(messages)
             .optional()
     }),
