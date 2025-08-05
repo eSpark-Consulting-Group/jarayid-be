@@ -1,5 +1,4 @@
-// middleware/errorHandler.js
-import logError from "../utils/logger.js";
+import { logError } from "../utils/logger.js";
 
 export const errorHandler = (err, req, res, next) => {
   console.error(err); // This will also trigger logError due to override
