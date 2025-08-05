@@ -122,25 +122,30 @@ class DashboardService {
     );
 
     // --- Page Views Trend ---
-    const thisMonthViews = await prisma.articleView.count({
-      where: { viewedAt: { gte: currentMonthStart } },
-    });
-
-    const pageViewTrends = [
-      {
-        date: now.format("YYYY-MM-DD"),
-        thisMonthViews,
-        lastMonthViews,
-      },
-    ];
+    const pageViewTrends = await Promise.all(
+      last7Days.map(async (date) => {
+        const views = await prisma.articleView.count({
+          where: {
+            viewedAt: {
+              gte: date.toDate(),
+              lt: date.add(1, "day").toDate(),
+            },
+          },
+        });
+        return {
+          date: date.format("YYYY-MM-DD"),
+          views,
+        };
+      })
+    );
 
     // --- Recent Articles ---
     const recentArticlesRaw = await prisma.article.findMany({
-      where: { publishedAt: { not: null } },
+      where: { publishedAt: { not: null }, summaryEnglish: { not: null } },
       orderBy: { publishedAt: "desc" },
       take: 4,
       select: {
-        title: true,
+        summaryEnglish: true,
         viewCount: true,
         publishedAt: true,
         status: true,
@@ -148,11 +153,12 @@ class DashboardService {
     });
 
     const recentArticles = recentArticlesRaw.map((article) => ({
-      title: article.title,
+      title: article.summaryEnglish,
       views: article.viewCount,
       publishedAt: article.publishedAt.toISOString(),
       status: article.status ? "Published" : "Draft",
     }));
+
 
     return {
       overview,
