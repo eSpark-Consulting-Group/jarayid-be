@@ -58,7 +58,7 @@ class StaticPageController {
         title,
         slug,
         content,
-        customFields: customFields || null,
+        ...(customFields !== undefined && { customFields }),
       };
 
       // Auto-generate translated content if OpenAI is available
@@ -325,11 +325,9 @@ class StaticPageController {
         ]);
       }
 
-      // Parse JSON if needed & map translations
       const formattedPages = staticPages.map((page) => {
         let translatedContent = page.translatedContent;
 
-        // If coming from raw SQL, parse JSON string
         if (typeof translatedContent === "string") {
           try {
             translatedContent = JSON.parse(translatedContent);
@@ -339,13 +337,13 @@ class StaticPageController {
         }
 
         return {
-          en: {
+          english: {
             title: translatedContent?.english?.title || page.title || null,
             content:
               translatedContent?.english?.content || page.content || null,
             slug: page.slug || null,
           },
-          ar: {
+          arabic: {
             title: translatedContent?.arabic?.title || null,
             content: translatedContent?.arabic?.content || null,
             slug: page.slug || null,

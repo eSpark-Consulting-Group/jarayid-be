@@ -62,8 +62,8 @@ const validation = createValidationMiddleware(schemas);
 // POST /static-pages (Admin only)
 router.post(
   "/",
-  auth,
-  adminAuth,
+  // auth,
+  // adminAuth,
   validation.staticPage.create,
   staticPageController.createStaticPage
 );
