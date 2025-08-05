@@ -524,7 +524,7 @@ class PaddleSubscriptionService {
      */
     async handleSubscriptionCreated(subscriptionData) {
         try {
-            const userId = subscriptionData.custom_data?.userId;
+            const userId = subscriptionData.customer_id;
             
             if (!userId) {
                 logger.warn('No userId found in subscription webhook data');

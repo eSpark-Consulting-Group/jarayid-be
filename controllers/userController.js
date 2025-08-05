@@ -180,8 +180,13 @@ class UserController {
                     country: true,
                     phoneNumber: true,
                     isDeleted: true,
+                    isBanned: true,
                     createdAt: true,
-                    updatedAt: true
+                    updatedAt: true,
+                    subscriptions: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
+                    }
                 }
             });
             
@@ -215,10 +220,61 @@ class UserController {
                 where: { id: user.id },
                 data: { lastLoginAt: new Date() }
             });
-            // Remove password and isDeleted from response
-            const { password: _, isDeleted: __, ...userResponse } = user;
+
+            // Process subscription information
+            const latestSubscription = user.subscriptions[0];
+            let subscriptionInfo = {
+                status: 'free',
+                isPremium: false,
+                trialEndsAt: null,
+                currentPeriodStart: null,
+                currentPeriodEnd: null,
+                daysRemaining: 0,
+                subscriptionId: null,
+                metadata: null
+            };
+
+            if (latestSubscription) {
+                const now = new Date();
+                
+                if (latestSubscription.isPremium && latestSubscription.status === 'ACTIVE') {
+                    subscriptionInfo = {
+                        status: 'premium',
+                        isPremium: true,
+                        trialEndsAt: null,
+                        currentPeriodStart: latestSubscription.currentPeriodStart,
+                        currentPeriodEnd: latestSubscription.currentPeriodEnd,
+                        daysRemaining: latestSubscription.currentPeriodEnd ? 
+                            Math.max(0, Math.ceil((new Date(latestSubscription.currentPeriodEnd) - now) / (1000 * 60 * 60 * 24))) : 0,
+                        subscriptionId: latestSubscription.id,
+                        metadata: latestSubscription.metadata
+                    };
+                } else if (latestSubscription.trialEndsAt && new Date(latestSubscription.trialEndsAt) > now && latestSubscription.status === 'TRIALING') {
+                    const trialDaysRemaining = Math.max(0, Math.ceil((new Date(latestSubscription.trialEndsAt) - now) / (1000 * 60 * 60 * 24)));
+                    subscriptionInfo = {
+                        status: 'trial',
+                        isPremium: false,
+                        trialEndsAt: latestSubscription.trialEndsAt,
+                        currentPeriodStart: latestSubscription.currentPeriodStart,
+                        currentPeriodEnd: latestSubscription.currentPeriodEnd,
+                        daysRemaining: trialDaysRemaining,
+                        subscriptionId: latestSubscription.id,
+                        metadata: latestSubscription.metadata
+                    };
+                }
+            }
+
+            // Remove password, isDeleted, and subscriptions from response
+            const { password: _, isDeleted: __, subscriptions: ___, ...userResponse } = user;
+            
+            // Add subscription info to user response
+            const userWithSubscription = {
+                ...userResponse,
+                subscription: subscriptionInfo
+            };
+
             const token = generateToken({ userId: user.id, email: user.email });
-            return response.success(res, { user: userResponse, token }, 'Logged in successfully');
+            return response.success(res, { user: userWithSubscription, token }, 'Logged in successfully');
         } catch (error) {
             logger.error('Login error:', { error: error?.message || error });
             return response.error(res, 'Login failed', 500, error.message);

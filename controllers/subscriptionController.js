@@ -240,10 +240,10 @@ class SubscriptionController {
             const body = req.body;
 
             // Verify webhook signature (implement signature verification)
-            // const isValid = await this.verifyWebhookSignature(signature, body);
-            // if (!isValid) {
-            //     return errorResponse(res, 'Invalid webhook signature', 400);
-            // }
+            const isValid = await this.verifyWebhookSignature(signature, body);
+            if (!isValid) {
+                return errorResponse(res, 'Invalid webhook signature', 400);
+            }
 
             const success = await paddleSubscriptionService.handleWebhook(body);
 
