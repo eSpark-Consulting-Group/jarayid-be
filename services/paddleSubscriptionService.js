@@ -166,7 +166,7 @@ class PaddleSubscriptionService {
                     currentPeriodEnd: new Date(paddleSubscription.currentBillingPeriod?.endsAt),
                     currency: paddleSubscription.items[0]?.price?.unitPrice?.currencyCode,
                     amount: parseFloat(paddleSubscription.items[0]?.price?.unitPrice?.amount) / 100,
-                    interval: this.mapPaddleIntervalToDb(paddleSubscription.items[0]?.price?.billingCycle?.frequency),
+                    interval: this.mapPaddleIntervalToDb(paddleSubscription.items[0]?.price?.billingCycle),
                     isPremium: true,
                     trialEndsAt: paddleSubscription.scheduledChange?.action === 'pause' ? 
                         new Date(paddleSubscription.scheduledChange.effectiveAt) : null,
@@ -496,17 +496,44 @@ class PaddleSubscriptionService {
                 case 'subscription.cancelled':
                     return await this.handleSubscriptionCancelled(event.data);
                 
+                case 'subscription.activated':
+                    return await this.handleSubscriptionActivated(event.data);
+                
+                case 'customer.created':
+                    return await this.handleCustomerCreated(event.data);
+                
                 case 'subscription.paused':
                     return await this.handleSubscriptionPaused(event.data);
                 
                 case 'subscription.resumed':
                     return await this.handleSubscriptionResumed(event.data);
                 
+                case 'transaction.created':
+                    return await this.handleTransactionCreated(event.data);
+                
+                case 'transaction.updated':
+                    return await this.handleTransactionUpdated(event.data);
+                
+                case 'transaction.ready':
+                    return await this.handleTransactionReady(event.data);
+                
+                case 'transaction.paid':
+                    return await this.handleTransactionPaid(event.data);
+                
                 case 'transaction.completed':
                     return await this.handlePaymentCompleted(event.data);
                 
                 case 'transaction.payment_failed':
                     return await this.handlePaymentFailed(event.data);
+                
+                case 'address.created':
+                    return await this.handleAddressCreated(event.data);
+                
+                case 'payment_method.saved':
+                    return await this.handlePaymentMethodSaved(event.data);
+                
+                case 'payment_method.deleted':
+                    return await this.handlePaymentMethodDeleted(event.data);
                 
                 default:
                     logger.info(`Unhandled webhook event: ${event.event_type}`);
@@ -524,10 +551,113 @@ class PaddleSubscriptionService {
      */
     async handleSubscriptionCreated(subscriptionData) {
         try {
-            const userId = subscriptionData.customer_id;
+            // Extract userId from custom_data first
+            let userId = subscriptionData.custom_data?.userId;
+            
+            // If not in custom_data, try to find user by customer ID
+            if (!userId && subscriptionData.customer_id) {
+                // First, try to find existing subscription with this customer ID
+                const existingSubscription = await prisma.subscription.findFirst({
+                    where: { paddleCustomerId: subscriptionData.customer_id },
+                    include: { user: true }
+                });
+                
+                if (existingSubscription) {
+                    userId = existingSubscription.userId;
+                    logger.info(`Found userId ${userId} from existing subscription with customer_id ${subscriptionData.customer_id}`);
+                } else {
+                    // Try to find user by email from customer data (if we have customer email)
+                    if (subscriptionData.customer_email) {
+                        const user = await prisma.user.findUnique({
+                            where: { email: subscriptionData.customer_email }
+                        });
+                        
+                        if (user) {
+                            userId = user.id;
+                            logger.info(`Found userId ${userId} by matching customer email ${subscriptionData.customer_email}`);
+                        }
+                    }
+                    
+                    // If still no userId, try to get customer details from Paddle
+                    if (!userId && subscriptionData.customer_id) {
+                        try {
+                            const customer = await paddle.customers.get(subscriptionData.customer_id);
+                            if (customer && customer.email) {
+                                const user = await prisma.user.findUnique({
+                                    where: { email: customer.email }
+                                });
+                                
+                                if (user) {
+                                    userId = user.id;
+                                    logger.info(`Found userId ${userId} by fetching customer ${subscriptionData.customer_id} from Paddle and matching email ${customer.email}`);
+                                }
+                            }
+                        } catch (paddleError) {
+                            logger.warn(`Could not fetch customer ${subscriptionData.customer_id} from Paddle:`, paddleError.message);
+                        }
+                    }
+                }
+            }
             
             if (!userId) {
-                logger.warn('No userId found in subscription webhook data');
+                logger.warn('No userId found in subscription webhook data', {
+                    subscriptionId: subscriptionData.id,
+                    customerId: subscriptionData.customer_id,
+                    customData: subscriptionData.custom_data,
+                    customerEmail: subscriptionData.customer_email || 'not provided'
+                });
+                
+                // Store the subscription with null userId for manual linking later
+                logger.info('Creating subscription with null userId for manual linking');
+                
+                // Check if subscription already exists
+                const existingSubscription = await prisma.subscription.findFirst({
+                    where: { paddleSubscriptionId: subscriptionData.id }
+                });
+
+                if (existingSubscription) {
+                    logger.info(`Subscription ${subscriptionData.id} already exists, updating...`);
+                    return await this.handleSubscriptionUpdated(subscriptionData);
+                }
+
+                // Create subscription with null userId for manual linking
+                await prisma.subscription.create({
+                    data: {
+                        userId: null, // Will need manual linking
+                        paddleSubscriptionId: subscriptionData.id,
+                        paddleCustomerId: subscriptionData.customer_id,
+                        paddlePlanId: subscriptionData.items[0]?.price?.id,
+                        status: subscriptionData.status.toUpperCase(),
+                        currentPeriodStart: new Date(subscriptionData.current_billing_period?.starts_at),
+                        currentPeriodEnd: new Date(subscriptionData.current_billing_period?.ends_at),
+                        currency: subscriptionData.items[0]?.price?.unit_price?.currency_code,
+                        amount: parseFloat(subscriptionData.items[0]?.price?.unit_price?.amount) / 100,
+                        interval: this.mapPaddleIntervalToDb(subscriptionData.items[0]?.price?.billing_cycle),
+                        isPremium: true,
+                        nextPaymentAt: subscriptionData.next_billed_at ? new Date(subscriptionData.next_billed_at) : null,
+                        metadata: {
+                            webhookData: subscriptionData,
+                            createdVia: 'webhook',
+                            needsManualLinking: true,
+                            customerEmail: subscriptionData.customer_email
+                        }
+                    }
+                });
+
+                logger.warn(`Subscription created without userId - requires manual linking: ${subscriptionData.id}`);
+                return true;
+            }
+
+            // Verify user exists
+            const user = await prisma.user.findUnique({
+                where: { id: userId }
+            });
+
+            if (!user) {
+                logger.error(`User ${userId} not found in database`, {
+                    subscriptionId: subscriptionData.id,
+                    customerId: subscriptionData.customer_id
+                });
                 return false;
             }
 
@@ -553,9 +683,9 @@ class PaddleSubscriptionService {
                     currentPeriodEnd: new Date(subscriptionData.current_billing_period?.ends_at),
                     currency: subscriptionData.items[0]?.price?.unit_price?.currency_code,
                     amount: parseFloat(subscriptionData.items[0]?.price?.unit_price?.amount) / 100,
-                    interval: this.mapPaddleIntervalToDb(subscriptionData.items[0]?.price?.billing_cycle?.frequency),
+                    interval: this.mapPaddleIntervalToDb(subscriptionData.items[0]?.price?.billing_cycle),
                     isPremium: true,
-                    nextPaymentAt: new Date(subscriptionData.next_billed_at),
+                    nextPaymentAt: subscriptionData.next_billed_at ? new Date(subscriptionData.next_billed_at) : null,
                     metadata: {
                         webhookData: subscriptionData,
                         createdVia: 'webhook'
@@ -656,7 +786,26 @@ class PaddleSubscriptionService {
             const subscriptionId = transactionData.subscription_id;
             
             if (!subscriptionId) {
-                logger.info('Payment completed but no subscription ID found');
+                // No subscription ID - this might be a one-time payment or subscription creation
+                logger.info('Payment completed but no subscription ID found', {
+                    transactionId: transactionData.id,
+                    customData: transactionData.custom_data,
+                    customerId: transactionData.customer_id
+                });
+
+                // If this has a userId in custom_data, it might be a subscription creation
+                const userId = transactionData.custom_data?.userId;
+                if (userId) {
+                    // Check if this is for a recurring subscription (not one-time)
+                    const hasRecurringItems = transactionData.items?.some(item => 
+                        item.price?.billing_cycle && item.price.billing_cycle.interval
+                    );
+
+                    if (hasRecurringItems) {
+                        logger.info(`Transaction ${transactionData.id} appears to be for subscription creation, waiting for subscription.created webhook`);
+                    }
+                }
+                
                 return true;
             }
 
@@ -746,14 +895,33 @@ class PaddleSubscriptionService {
     /**
      * Map Paddle interval to database enum
      */
-    mapPaddleIntervalToDb(paddleFrequency) {
-        if (!paddleFrequency) return null;
+    mapPaddleIntervalToDb(billingCycle) {
+        if (!billingCycle) return null;
         
-        const { type, interval } = paddleFrequency;
+        // Handle different billing cycle structures
+        let interval, frequency;
         
-        if (type === 'month' && interval === 1) return 'MONTHLY';
-        if (type === 'year' && interval === 1) return 'YEARLY';
-        if (type === 'week' && interval === 1) return 'WEEKLY';
+        if (billingCycle.interval && billingCycle.frequency) {
+            // Format: { interval: "month", frequency: 1 }
+            interval = billingCycle.interval;
+            frequency = billingCycle.frequency;
+        } else if (billingCycle.type && billingCycle.interval) {
+            // Format: { type: "month", interval: 1 }
+            interval = billingCycle.type;
+            frequency = billingCycle.interval;
+        } else {
+            logger.warn('Unknown billing cycle format:', billingCycle);
+            return 'MONTHLY'; // Default fallback
+        }
+        
+        if (interval === 'month' && frequency === 1) return 'MONTHLY';
+        if (interval === 'year' && frequency === 1) return 'YEARLY';
+        if (interval === 'week' && frequency === 1) return 'WEEKLY';
+        
+        // Handle multi-period intervals
+        if (interval === 'month' && frequency > 1) return `${frequency}_MONTHLY`;
+        if (interval === 'year' && frequency > 1) return `${frequency}_YEARLY`;
+        if (interval === 'week' && frequency > 1) return `${frequency}_WEEKLY`;
         
         return 'MONTHLY'; // Default fallback
     }
@@ -798,6 +966,355 @@ class PaddleSubscriptionService {
         } catch (error) {
             logger.error('Error updating subscription status:', error);
             return false;
+        }
+    }
+
+    /**
+     * Handle subscription activated webhook
+     */
+    async handleSubscriptionActivated(subscriptionData) {
+        try {
+            logger.info(`Subscription activated: ${subscriptionData.id}`);
+            return await this.updateSubscriptionStatus(subscriptionData.id, 'ACTIVE', { 
+                activatedAt: new Date(),
+                isPremium: true 
+            });
+        } catch (error) {
+            logger.error('Error handling subscription activated webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle customer created webhook
+     */
+    async handleCustomerCreated(customerData) {
+        try {
+            logger.info(`Customer created: ${customerData.id}`, {
+                customerId: customerData.id,
+                email: customerData.email,
+                customData: customerData.custom_data
+            });
+            
+            // Store customer information for future reference
+            // If there's a userId in custom_data, we could link it to our user
+            if (customerData.custom_data?.userId) {
+                const userId = customerData.custom_data.userId;
+                logger.info(`Customer ${customerData.id} linked to user ${userId}`);
+                
+                // You could store this mapping in a separate table if needed
+                // For now, we'll just log it
+            }
+            
+            return true;
+        } catch (error) {
+            logger.error('Error handling customer created webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle transaction created webhook
+     */
+    async handleTransactionCreated(transactionData) {
+        try {
+            logger.info(`Transaction created: ${transactionData.id}`, {
+                transactionId: transactionData.id,
+                status: transactionData.status,
+                origin: transactionData.origin,
+                customerId: transactionData.customer_id,
+                subscriptionId: transactionData.subscription_id
+            });
+            
+            // Just log for now - transactions are handled in other events
+            return true;
+        } catch (error) {
+            logger.error('Error handling transaction created webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle transaction updated webhook
+     */
+    async handleTransactionUpdated(transactionData) {
+        try {
+            logger.info(`Transaction updated: ${transactionData.id}`, {
+                transactionId: transactionData.id,
+                status: transactionData.status,
+                subscriptionId: transactionData.subscription_id
+            });
+            
+            // Handle subscription-related transaction updates
+            if (transactionData.subscription_id) {
+                const subscription = await prisma.subscription.findFirst({
+                    where: { paddleSubscriptionId: transactionData.subscription_id }
+                });
+
+                if (subscription) {
+                    await prisma.subscription.update({
+                        where: { id: subscription.id },
+                        data: {
+                            metadata: {
+                                ...subscription.metadata,
+                                lastTransactionUpdate: {
+                                    transactionId: transactionData.id,
+                                    status: transactionData.status,
+                                    updatedAt: new Date().toISOString()
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            logger.error('Error handling transaction updated webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle transaction ready webhook
+     */
+    async handleTransactionReady(transactionData) {
+        try {
+            logger.info(`Transaction ready: ${transactionData.id}`, {
+                transactionId: transactionData.id,
+                subscriptionId: transactionData.subscription_id
+            });
+            
+            // Transaction is ready for payment - just log for now
+            return true;
+        } catch (error) {
+            logger.error('Error handling transaction ready webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle transaction paid webhook
+     */
+    async handleTransactionPaid(transactionData) {
+        try {
+            logger.info(`Transaction paid: ${transactionData.id}`, {
+                transactionId: transactionData.id,
+                subscriptionId: transactionData.subscription_id,
+                total: transactionData.details?.totals?.total,
+                currency: transactionData.currency_code
+            });
+
+            if (transactionData.subscription_id) {
+                const subscription = await prisma.subscription.findFirst({
+                    where: { paddleSubscriptionId: transactionData.subscription_id }
+                });
+
+                if (subscription) {
+                    await prisma.subscription.update({
+                        where: { id: subscription.id },
+                        data: {
+                            lastPaymentAt: new Date(),
+                            status: 'ACTIVE',
+                            isPremium: true,
+                            metadata: {
+                                ...subscription.metadata,
+                                lastPaidTransaction: {
+                                    transactionId: transactionData.id,
+                                    amount: transactionData.details?.totals?.total,
+                                    currency: transactionData.currency_code,
+                                    paidAt: new Date().toISOString()
+                                }
+                            }
+                        }
+                    });
+                    
+                    logger.info(`Subscription ${subscription.id} updated after transaction paid`);
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            logger.error('Error handling transaction paid webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle address created webhook
+     */
+    async handleAddressCreated(addressData) {
+        try {
+            logger.info(`Address created: ${addressData.id}`, {
+                addressId: addressData.id,
+                customerId: addressData.customer_id
+            });
+            
+            // Just log for now - address creation doesn't affect subscriptions directly
+            return true;
+        } catch (error) {
+            logger.error('Error handling address created webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle payment method saved webhook
+     */
+    async handlePaymentMethodSaved(paymentMethodData) {
+        try {
+            logger.info(`Payment method saved: ${paymentMethodData.id}`, {
+                paymentMethodId: paymentMethodData.id,
+                customerId: paymentMethodData.customer_id,
+                type: paymentMethodData.type
+            });
+            
+            // Update customer payment method info if needed
+            if (paymentMethodData.customer_id) {
+                const subscription = await prisma.subscription.findFirst({
+                    where: { paddleCustomerId: paymentMethodData.customer_id }
+                });
+
+                if (subscription) {
+                    await prisma.subscription.update({
+                        where: { id: subscription.id },
+                        data: {
+                            metadata: {
+                                ...subscription.metadata,
+                                paymentMethod: {
+                                    id: paymentMethodData.id,
+                                    type: paymentMethodData.type,
+                                    savedAt: new Date().toISOString()
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            logger.error('Error handling payment method saved webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Handle payment method deleted webhook
+     */
+    async handlePaymentMethodDeleted(paymentMethodData) {
+        try {
+            logger.info(`Payment method deleted: ${paymentMethodData.id}`, {
+                paymentMethodId: paymentMethodData.id,
+                customerId: paymentMethodData.customer_id
+            });
+            
+            // Update customer payment method info if needed
+            if (paymentMethodData.customer_id) {
+                const subscription = await prisma.subscription.findFirst({
+                    where: { paddleCustomerId: paymentMethodData.customer_id }
+                });
+
+                if (subscription && subscription.metadata?.paymentMethod?.id === paymentMethodData.id) {
+                    await prisma.subscription.update({
+                        where: { id: subscription.id },
+                        data: {
+                            metadata: {
+                                ...subscription.metadata,
+                                paymentMethod: null,
+                                paymentMethodDeleted: {
+                                    deletedMethodId: paymentMethodData.id,
+                                    deletedAt: new Date().toISOString()
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            logger.error('Error handling payment method deleted webhook:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Manually link an orphaned subscription to a user
+     * @param {String} paddleSubscriptionId - Paddle subscription ID
+     * @param {String} userId - User ID to link to
+     * @returns {Promise<Object>} Updated subscription
+     */
+    async linkOrphanedSubscription(paddleSubscriptionId, userId) {
+        try {
+            // Find the orphaned subscription
+            const subscription = await prisma.subscription.findFirst({
+                where: { 
+                    paddleSubscriptionId,
+                    userId: null 
+                }
+            });
+
+            if (!subscription) {
+                throw new Error('Orphaned subscription not found');
+            }
+
+            // Verify user exists
+            const user = await prisma.user.findUnique({
+                where: { id: userId }
+            });
+
+            if (!user) {
+                throw new Error('User not found');
+            }
+
+            // Link the subscription to the user
+            const updatedSubscription = await prisma.subscription.update({
+                where: { id: subscription.id },
+                data: {
+                    userId,
+                    metadata: {
+                        ...subscription.metadata,
+                        needsManualLinking: false,
+                        linkedManually: true,
+                        linkedAt: new Date().toISOString(),
+                        linkedBySystem: true
+                    }
+                }
+            });
+
+            logger.info(`Orphaned subscription ${paddleSubscriptionId} successfully linked to user ${userId}`);
+            return updatedSubscription;
+
+        } catch (error) {
+            logger.error('Error linking orphaned subscription:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all orphaned subscriptions (subscriptions without userId)
+     * @returns {Promise<Array>} List of orphaned subscriptions
+     */
+    async getOrphanedSubscriptions() {
+        try {
+            const orphanedSubscriptions = await prisma.subscription.findMany({
+                where: { 
+                    userId: null,
+                    metadata: {
+                        path: ['needsManualLinking'],
+                        equals: true
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            logger.info(`Found ${orphanedSubscriptions.length} orphaned subscriptions`);
+            return orphanedSubscriptions;
+
+        } catch (error) {
+            logger.error('Error getting orphaned subscriptions:', error);
+            throw error;
         }
     }
 }

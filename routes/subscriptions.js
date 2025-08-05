@@ -453,4 +453,101 @@ router.put('/:subscriptionId',
  */
 router.post('/webhook', subscriptionController.handleWebhook.bind(subscriptionController));
 
+/**
+ * @swagger
+ * /subscriptions/orphaned:
+ *   get:
+ *     summary: Get orphaned subscriptions (admin only)
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Get subscriptions that were created without userId and need manual linking
+ *     responses:
+ *       200:
+ *         description: Orphaned subscriptions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orphanedSubscriptions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           paddleSubscriptionId:
+ *                             type: string
+ *                           paddleCustomerId:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                           metadata:
+ *                             type: object
+ *                     count:
+ *                       type: integer
+ *                     message:
+ *                       type: string
+ */
+router.get('/orphaned', auth, subscriptionController.getOrphanedSubscriptions.bind(subscriptionController));
+
+/**
+ * @swagger
+ * /subscriptions/link-orphaned:
+ *   post:
+ *     summary: Link orphaned subscription to user (admin only)
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Manually link a subscription that was created without userId to a specific user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paddleSubscriptionId
+ *               - userId
+ *             properties:
+ *               paddleSubscriptionId:
+ *                 type: string
+ *                 description: Paddle subscription ID to link
+ *                 example: "sub_01234567890"
+ *               userId:
+ *                 type: string
+ *                 description: User ID to link subscription to
+ *                 example: "user-uuid-12345"
+ *     responses:
+ *       200:
+ *         description: Subscription linked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     subscription:
+ *                       $ref: '#/components/schemas/Subscription'
+ *                     message:
+ *                       type: string
+ *       400:
+ *         description: Bad request - missing required parameters
+ *       404:
+ *         description: Subscription or user not found
+ */
+router.post('/link-orphaned', auth, subscriptionController.linkOrphanedSubscription.bind(subscriptionController));
+
 export default router;
