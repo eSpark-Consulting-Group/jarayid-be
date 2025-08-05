@@ -52,6 +52,13 @@ const rssSummarizationSchema = {
       .messages(messages),
 
     category: Joi.array().items(Joi.string()).required().messages(messages),
+    
+    day_number: Joi.number()
+      .integer()
+      .min(1)
+      .max(31)
+      .required()
+      .messages(messages),
 
     time_limit: Joi.string()
       .valid("day", "week", "month")
