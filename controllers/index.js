@@ -1,0 +1,39 @@
+// Centralised export for all controllers
+import UserController from './userController.js';
+import categoryController from './categoryController.js';
+import RSSFeedController from './rssFeedController.js';
+import ArticleController from './articleController.js';
+import CommentController from './commentController.js';
+import AISummaryController from './aiSummaryController.js';
+import YouTubeContentController from './youtubeContentController.js';
+import staticPageController from './staticPageController.js';
+import ContactController from './contactController.js';
+import SponsorAccountController from './sponsorAccountController.js';
+import ExternalLinkController from './externalLinkController.js';
+import CookieController from './cookieController.js';
+import VisualAdPlacementController from './visualAdPlacementController.js';
+import OpenAIKeyController from './openAIKeyController.js';
+import BugController from './bugController.js';
+import RssSummarizationController from './rssSummarizationController.js';
+import DashboardController from './dashboardController.js';
+
+export { 
+    UserController, 
+    categoryController, 
+    RSSFeedController, 
+    ArticleController, 
+    CommentController,
+    AISummaryController,
+    YouTubeContentController,
+    staticPageController,
+    ContactController,
+    SponsorAccountController,
+    ExternalLinkController,
+    CookieController,
+    VisualAdPlacementController,
+    OpenAIKeyController,
+    BugController,
+    RssSummarizationController,
+    DashboardController
+};
+export default UserController;
