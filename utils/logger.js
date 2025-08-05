@@ -1,9 +1,6 @@
 import winston from "winston";
 import prisma from "../prisma/index.js";
 
-/**
- * Winston Logger configuration
- */
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
@@ -35,10 +32,8 @@ export async function logBug({
   description
 }) {
   try {
-    // Log to winston
     logger.log({ level, message: `[${category}] ${description}` });
 
-    // Save to Bug model in DB
     await prisma.bug.create({
       data: {
         type,
@@ -52,8 +47,7 @@ export async function logBug({
       },
     });
   } catch (err) {
-    // If saving to DB fails, fallback to winston error log
-    logger.error("Failed to save bug to DB", { error: err.message });
+    logger.error("Failed to save bug to DB", { error: err });
   }
 }
 
