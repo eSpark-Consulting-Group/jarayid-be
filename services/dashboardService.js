@@ -121,9 +121,18 @@ class DashboardService {
       })
     );
 
-    // --- Page Views Trend ---
-    const pageViewTrends = await Promise.all(
-      last7Days.map(async (date) => {
+    // --- Page Views Trend (Last Month vs This Month) ---
+    const startOfThisMonth = dayjs().startOf("month");
+    const startOfLastMonth = dayjs().subtract(1, "month").startOf("month");
+    const endOfLastMonth = startOfThisMonth;
+
+    const daysInLastMonth = endOfLastMonth.diff(startOfLastMonth, "day");
+    const daysInThisMonth = dayjs().diff(startOfThisMonth, "day") + 1;
+
+    const getMonthlyViews = async (start, days) => {
+      const result = [];
+      for (let i = 0; i < days; i++) {
+        const date = start.add(i, "day");
         const views = await prisma.articleView.count({
           where: {
             viewedAt: {
@@ -132,12 +141,27 @@ class DashboardService {
             },
           },
         });
-        return {
+        result.push({
           date: date.format("YYYY-MM-DD"),
           views,
-        };
-      })
+        });
+      }
+      return result;
+    };
+
+    const lastMonthViewsTrend = await getMonthlyViews(
+      startOfLastMonth,
+      daysInLastMonth
     );
+    const thisMonthViewsTrend = await getMonthlyViews(
+      startOfThisMonth,
+      daysInThisMonth
+    );
+
+    const pageViewTrends = {
+      lastMonth: lastMonthViewsTrend,
+      thisMonth: thisMonthViewsTrend,
+    };
 
     // --- Recent Articles ---
     const recentArticlesRaw = await prisma.article.findMany({
@@ -158,7 +182,6 @@ class DashboardService {
       publishedAt: article.publishedAt.toISOString(),
       status: article.status ? "Published" : "Draft",
     }));
-
 
     return {
       overview,
