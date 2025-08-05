@@ -1,6 +1,7 @@
 
 import winston from 'winston';
 import { response, pagination, youtubeUtils } from '../utils/index.js';
+import openaiService from '../services/openaiService.js';
 
 import prisma from '../prisma/index.js';
 // Logger configuration
@@ -23,9 +24,22 @@ const logger = winston.createLogger({
 
 
 class YouTubeContentController {
-      constructor() {
-            this.prisma = prisma;
-        }
+    constructor() {
+        this.prisma = prisma;
+        
+        // Bind methods to preserve 'this' context
+        this.create = this.create.bind(this);
+        this.getAll = this.getAll.bind(this);
+        this.getById = this.getById.bind(this);
+        this.update = this.update.bind(this);
+        this.delete = this.delete.bind(this);
+        this.getStats = this.getStats.bind(this);
+        this.toggleStatus = this.toggleStatus.bind(this);
+        this.refreshThumbnail = this.refreshThumbnail.bind(this);
+        this.getThumbnails = this.getThumbnails.bind(this);
+        this.bulkRefreshThumbnails = this.bulkRefreshThumbnails.bind(this);
+        this.extractTranslatedField = this.extractTranslatedField.bind(this);
+    }
     /**
      * Create new YouTube content
      * POST /api/youtube-content
@@ -85,21 +99,82 @@ class YouTubeContentController {
             }
 
             // Create YouTube content with enhanced data
+            const youtubeContentData = {
+                title,
+                youtubeUrl,
+                contentType: finalContentType,
+                categoryId,
+                description: description || null,
+                thumbnailUrl: finalThumbnailUrl,
+                deviceType: deviceType || null,
+                duration: duration || null,
+                isEnabled: isEnabled ?? true,
+                createdById: userId,
+                // Store additional YouTube info for future use
+                videoId: youtubeInfo.videoId
+            };
+
+            // Auto-generate translated content if OpenAI is available
+            if (openaiService.isAvailable()) {
+                try {
+                    logger.info(`Starting auto-translation for new YouTube content: ${title}`);
+                    
+                    // Prepare content for translation
+                    let translationText = '';
+                    if (title) {
+                        translationText += `Title: ${title}\n`;
+                    }
+                    if (description) {
+                        translationText += `Description: ${description}\n`;
+                    }
+
+                    if (translationText.trim()) {
+                        logger.info(`Translation text prepared for "${title}":`, { translationText });
+                        const translationResult = await openaiService.translateContent(translationText, 'auto');
+                        
+                        logger.info(`Translation result for "${title}":`, { 
+                            success: translationResult.success,
+                            arabicContentLength: translationResult.arabicContent?.length || 0,
+                            englishContentLength: translationResult.englishContent?.length || 0,
+                            arabicContent: translationResult.arabicContent,
+                            englishContent: translationResult.englishContent,
+                            sourceLanguage: translationResult.sourceLanguage
+                        });
+                        
+                        if (translationResult.success) {
+                            youtubeContentData.translatedContent = [
+                                {
+                                    language: 'arabic',
+                                    title: this.extractTranslatedField(translationResult.arabicContent, 'Title'),
+                                    description: this.extractTranslatedField(translationResult.arabicContent, 'Description'),
+                                    translatedAt: translationResult.translatedAt,
+                                    sourceLanguage: translationResult.sourceLanguage
+                                },
+                                {
+                                    language: 'english',
+                                    title: this.extractTranslatedField(translationResult.englishContent, 'Title'),
+                                    description: this.extractTranslatedField(translationResult.englishContent, 'Description'),
+                                    translatedAt: translationResult.translatedAt,
+                                    sourceLanguage: translationResult.sourceLanguage
+                                }
+                            ];
+
+                            logger.info(`✅ Successfully translated new YouTube content: ${title}`);
+                        } else {
+                            logger.warn(`⚠️ Translation failed for new YouTube content: ${title}`, { error: translationResult.error });
+                        }
+                    }
+                } catch (translationError) {
+                    logger.error('Translation error during YouTube content creation:', { 
+                        error: translationError?.message || translationError,
+                        contentTitle: title 
+                    });
+                    // Continue with creation even if translation fails
+                }
+            }
+
             const youtubeContent = await prisma.youTubeContent.create({
-                data: {
-                    title,
-                    youtubeUrl,
-                    contentType: finalContentType,
-                    categoryId,
-                    description: description || null,
-                    thumbnailUrl: finalThumbnailUrl,
-                    deviceType: deviceType || null,
-                    duration: duration || null,
-                    isEnabled: isEnabled ?? true,
-                    createdById: userId,
-                    // Store additional YouTube info for future use
-                    videoId: youtubeInfo.videoId
-                },
+                data: youtubeContentData,
                 include: {
                     category: {
                         select: { id: true, name: true, type: true }
@@ -305,7 +380,13 @@ class YouTubeContentController {
             // Check if content exists
             const existingContent = await prisma.youTubeContent.findUnique({
                 where: { id },
-                select: { id: true, createdById: true, title: true }
+                select: { 
+                    id: true, 
+                    createdById: true, 
+                    title: true, 
+                    description: true,
+                    translatedContent: true
+                }
             });
 
             if (!existingContent) {
@@ -365,6 +446,63 @@ class YouTubeContentController {
 
                     // Store video ID for future use
                     updateData.videoId = youtubeInfo.videoId;
+                }
+            }
+
+            // Handle auto-translation if OpenAI is available
+            if (openaiService.isAvailable()) {
+                try {
+                    logger.info(`Starting auto-translation for YouTube content: ${existingContent.title}`);
+                    
+                    const contentToTranslate = {
+                        title: updateData.title || existingContent.title,
+                        description: updateData.description || existingContent.description
+                    };
+
+                    // Prepare content for translation
+                    let translationText = '';
+                    if (contentToTranslate.title) {
+                        translationText += `Title: ${contentToTranslate.title}\n`;
+                    }
+                    if (contentToTranslate.description) {
+                        translationText += `Description: ${contentToTranslate.description}\n`;
+                    }
+
+                    if (translationText.trim()) {
+                        // Translate the content to Arabic and English
+                        const translationResult = await openaiService.translateContent(translationText, 'auto');
+                        
+                        if (translationResult.success) {
+                            const existingTranslatedContent = existingContent.translatedContent || [];
+                            
+                            updateData.translatedContent = [
+                                {
+                                    language: 'arabic',
+                                    title: this.extractTranslatedField(translationResult.arabicContent, 'Title'),
+                                    description: this.extractTranslatedField(translationResult.arabicContent, 'Description'),
+                                    translatedAt: translationResult.translatedAt,
+                                    sourceLanguage: translationResult.sourceLanguage
+                                },
+                                {
+                                    language: 'english',
+                                    title: this.extractTranslatedField(translationResult.englishContent, 'Title'),
+                                    description: this.extractTranslatedField(translationResult.englishContent, 'Description'),
+                                    translatedAt: translationResult.translatedAt,
+                                    sourceLanguage: translationResult.sourceLanguage
+                                }
+                            ];
+
+                            logger.info(`✅ Successfully translated YouTube content for: ${existingContent.title}`);
+                        } else {
+                            logger.warn(`⚠️ Translation failed for YouTube content: ${existingContent.title}`, { error: translationResult.error });
+                        }
+                    }
+                } catch (translationError) {
+                    logger.error('Translation error during YouTube content update:', { 
+                        error: translationError?.message || translationError,
+                        contentId: id 
+                    });
+                    // Continue with update even if translation fails
                 }
             }
 
@@ -818,6 +956,68 @@ class YouTubeContentController {
 
             return response.error(res, 'Failed to bulk refresh thumbnails', 500, error.message);
         }
+    }
+
+    /**
+     * Helper method to extract translated field from OpenAI response
+     */
+    extractTranslatedField(translatedText, fieldName) {
+        if (!translatedText) {
+            logger.warn(`No translated text provided for field: ${fieldName}`);
+            return null;
+        }
+        
+        // Log the translated text for debugging (truncated for readability)
+        const truncatedText = translatedText.length > 500 ? translatedText.substring(0, 500) + '...' : translatedText;
+        logger.info(`Extracting field "${fieldName}" from translated text:`, { truncatedText });
+        
+        // Try multiple regex patterns to match different response formats
+        const patterns = [
+            // Standard format: "FieldName: value"
+            new RegExp(`${fieldName}:\\s*(.+?)(?=\\n|$)`, 'i'),
+            // Quoted format: "FieldName: "value""
+            new RegExp(`${fieldName}:\\s*"([^"]+)"`, 'i'),
+            // Single quoted format: "FieldName: 'value'"
+            new RegExp(`${fieldName}:\\s*'([^']+)'`, 'i'),
+            // With extra text: "FieldName (Arabic): value"
+            new RegExp(`${fieldName}[^:]*:\\s*(.+?)(?=\\n|$)`, 'i'),
+            // Arabic format variations
+            new RegExp(`${fieldName}.*?:\\s*(.+?)(?=\\n|$)`, 'i'),
+            // Line-by-line search (more flexible)
+            new RegExp(`^.*${fieldName}.*?:\\s*(.+?)$`, 'mi'),
+            // Handle potential Unicode issues with Arabic
+            new RegExp(`${fieldName}[\\s\\u200B-\\u200D\\uFEFF]*:\\s*(.+?)(?=\\n|$)`, 'i')
+        ];
+        
+        for (let i = 0; i < patterns.length; i++) {
+            const regex = patterns[i];
+            const match = translatedText.match(regex);
+            if (match && match[1] && match[1].trim()) {
+                const extractedValue = match[1].trim().replace(/^["']|["']$/g, ''); // Remove quotes
+                if (extractedValue && extractedValue !== 'null' && extractedValue !== 'undefined') {
+                    logger.info(`Successfully extracted "${fieldName}" using pattern ${i + 1}: ${extractedValue}`);
+                    return extractedValue;
+                }
+            }
+        }
+        
+        // If no pattern worked, try to find any line containing the field name
+        const lines = translatedText.split('\n');
+        for (const line of lines) {
+            if (line.toLowerCase().includes(fieldName.toLowerCase()) && line.includes(':')) {
+                const parts = line.split(':');
+                if (parts.length >= 2) {
+                    const value = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
+                    if (value && value !== 'null' && value !== 'undefined') {
+                        logger.info(`Successfully extracted "${fieldName}" from line: ${value}`);
+                        return value;
+                    }
+                }
+            }
+        }
+        
+        logger.warn(`Could not extract field "${fieldName}" from translated text. Available content: ${truncatedText}`);
+        return null;
     }
 }
 

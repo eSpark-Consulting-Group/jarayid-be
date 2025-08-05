@@ -260,6 +260,7 @@ model YouTubeContent {
   thumbnailUrl String?            @db.VarChar(500)
   deviceType   String?            @db.VarChar(50)
   duration     String?            @db.VarChar(20)
+  translatedContent Json?          // Optional translated content
   createdById  String
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt

@@ -197,8 +197,6 @@ router.post('/', auth, validation.youtubeContent.create, youtubeContentControlle
  *   get:
  *     summary: Get all YouTube content with filtering and pagination
  *     tags: [YouTube Content]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -298,7 +296,7 @@ router.post('/', auth, validation.youtubeContent.create, youtubeContentControlle
  *       500:
  *         description: Internal server error
  */
-router.get('/', auth, validation.youtubeContent.query, youtubeContentController.getAll);
+router.get('/',  validation.youtubeContent.query, youtubeContentController.getAll);
 
 /**
  * @swagger
@@ -391,8 +389,6 @@ router.get('/stats', auth, youtubeContentController.getStats);
  *   get:
  *     summary: Get single YouTube content by ID
  *     tags: [YouTube Content]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -424,7 +420,7 @@ router.get('/stats', auth, youtubeContentController.getStats);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', auth, validation.youtubeContent.params, youtubeContentController.getById);
+router.get('/:id', validation.youtubeContent.params, youtubeContentController.getById);
 
 /**
  * @swagger
