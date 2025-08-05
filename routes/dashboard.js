@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { DashboardController } from "../controllers/index.js";
-// import { auth, adminAuth } from "../middleware/index.js";
+import { auth, adminAuth } from "../middleware/index.js";
 
 const router = Router();
 const dashboardController = new DashboardController();
