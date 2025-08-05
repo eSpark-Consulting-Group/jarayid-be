@@ -14,7 +14,7 @@ import schemas from './schemas/index.js';
 import apiRouter from './routes/index.js';
 import { rssQueueService, aiSummaryQueueService, trialService } from './services/index.js';
 import { errorHandler } from './middleware/index.js';
-import logError from "./utils/logger.js";
+import { logError } from "./utils/logger.js";
 
 const originalConsoleError = console.error;
 console.error = async (...args) => {

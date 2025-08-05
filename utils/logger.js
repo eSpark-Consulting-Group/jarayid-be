@@ -51,4 +51,14 @@ export async function logBug({
   }
 }
 
+export async function logError(message, meta = {}) {
+  logger.error(message, meta);
+  await logBug({
+    type: meta.type || "API",
+    category: meta.category || "General",
+    description: message,
+    level: "error",
+  });
+}
+
 export default logger;
