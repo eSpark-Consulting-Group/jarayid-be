@@ -20,6 +20,6 @@ const dashboardController = new DashboardController();
  *       500:
  *         description: Internal server error
  */
-router.get("/", /*auth, adminAuth,*/ dashboardController.getDashboardData.bind(dashboardController));
+router.get("/", auth, adminAuth, dashboardController.getDashboardData.bind(dashboardController));
 
 export default router;

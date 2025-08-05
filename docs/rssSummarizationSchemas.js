@@ -48,9 +48,14 @@
  *               items:
  *                 type: string
  *               description: Array of category names associated with summarization
+ *             day_number:
+ *               type: integer
+ *               minimum: 1
+ *               maximum: 31
+ *               description: Specific day number (1–31) for summarization
  *             time_limit:
  *               type: string
- *               enum: [2_days, week, month]
+ *               enum: [day, week, month]
  *               description: Time limit for considering articles for summarization
  *             threshold:
  *               type: integer
@@ -104,9 +109,14 @@
  *           items:
  *             type: string
  *           description: Array of category names associated with summarization
+ *         day_number:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 31
+ *           description: Specific day number (1–31) for summarization
  *         time_limit:
  *           type: string
- *           enum: [2_days, week, month]
+ *           enum: [day, week, month]
  *           description: Time limit for considering articles for summarization
  *         threshold:
  *           type: integer
@@ -119,6 +129,7 @@
  *         - word_range_over_1000
  *         - gpt_model
  *         - category
+ *         - day_number
  *         - time_limit
  *         - threshold
  *       example:
@@ -128,6 +139,7 @@
  *         word_range_over_1000: 20
  *         gpt_model: "gpt-4.1-nano"
  *         category: ["Technology", "AI"]
+ *         day_number: 17
  *         time_limit: "week"
  *         threshold: 5
  */
