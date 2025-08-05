@@ -27,7 +27,7 @@ const logger = winston.createLogger({
 class StaticPageController {
   constructor() {
     this.prisma = prisma;
-    
+
     // Bind methods to preserve 'this' context
     this.createStaticPage = this.createStaticPage.bind(this);
     this.getAllStaticPages = this.getAllStaticPages.bind(this);
@@ -58,23 +58,25 @@ class StaticPageController {
         title,
         slug,
         content,
-        customFields: customFields || null
+        customFields: customFields || null,
       };
 
       // Auto-generate translated content if OpenAI is available
       if (openaiService.isAvailable()) {
         try {
-          logger.info(`Starting auto-translation for new static page: ${title}`);
-          
+          logger.info(
+            `Starting auto-translation for new static page: ${title}`
+          );
+
           // Prepare content for translation
-          let translationText = '';
+          let translationText = "";
           if (title) {
             translationText += `Title: ${title}\n`;
           }
           if (content) {
             // Handle content based on its type (JSON or string)
-            let contentString = '';
-            if (typeof content === 'object') {
+            let contentString = "";
+            if (typeof content === "object") {
               // If content is JSON, extract text fields for translation
               contentString = this.extractTextFromJSON(content);
             } else {
@@ -86,41 +88,64 @@ class StaticPageController {
           }
 
           if (translationText.trim()) {
-            logger.info(`Translation text prepared for "${title}":`, { translationText });
-            const translationResult = await openaiService.translateContent(translationText, 'auto');
-            
-            logger.info(`Translation result for "${title}":`, { 
+            logger.info(`Translation text prepared for "${title}":`, {
+              translationText,
+            });
+            const translationResult = await openaiService.translateContent(
+              translationText,
+              "auto"
+            );
+
+            logger.info(`Translation result for "${title}":`, {
               success: translationResult.success,
               arabicContentLength: translationResult.arabicContent?.length || 0,
-              englishContentLength: translationResult.englishContent?.length || 0,
+              englishContentLength:
+                translationResult.englishContent?.length || 0,
               arabicContent: translationResult.arabicContent,
               englishContent: translationResult.englishContent,
-              sourceLanguage: translationResult.sourceLanguage
+              sourceLanguage: translationResult.sourceLanguage,
             });
-            
+
             if (translationResult.success) {
               pageData.translatedContent = {
                 arabic: {
-                  title: this.extractTranslatedField(translationResult.arabicContent, 'Title'),
-                  content: this.extractTranslatedField(translationResult.arabicContent, 'Content')
+                  title: this.extractTranslatedField(
+                    translationResult.arabicContent,
+                    "Title"
+                  ),
+                  content: this.extractTranslatedField(
+                    translationResult.arabicContent,
+                    "Content"
+                  ),
                 },
                 english: {
-                  title: this.extractTranslatedField(translationResult.englishContent, 'Title'),
-                  content: this.extractTranslatedField(translationResult.englishContent, 'Content')
+                  title: this.extractTranslatedField(
+                    translationResult.englishContent,
+                    "Title"
+                  ),
+                  content: this.extractTranslatedField(
+                    translationResult.englishContent,
+                    "Content"
+                  ),
                 },
                 translatedAt: translationResult.translatedAt,
-                sourceLanguage: translationResult.sourceLanguage
+                sourceLanguage: translationResult.sourceLanguage,
               };
 
-              logger.info(`✅ Successfully translated new static page content: ${title}`);
+              logger.info(
+                `✅ Successfully translated new static page content: ${title}`
+              );
             } else {
-              logger.warn(`⚠️ Translation failed for new static page: ${title}`, { error: translationResult.error });
+              logger.warn(
+                `⚠️ Translation failed for new static page: ${title}`,
+                { error: translationResult.error }
+              );
             }
           }
         } catch (translationError) {
-          logger.error('Translation error during static page creation:', { 
+          logger.error("Translation error during static page creation:", {
             error: translationError?.message || translationError,
-            pageTitle: title 
+            pageTitle: title,
           });
           // Continue with creation even if translation fails
         }
@@ -149,6 +174,92 @@ class StaticPageController {
     }
   }
 
+  // async getAllStaticPages(req, res) {
+  //   try {
+  //     const { page = 1, limit = 10, search } = req.query;
+
+  //     const { skip, take } = pagination.getPaginationParams(req.query, {
+  //       defaultLimit: 10,
+  //       maxLimit: 200,
+  //     });
+
+  //     let staticPages, total;
+
+  //     if (search) {
+  //       // For JSON content search, we need to use raw queries
+  //       const searchTerm = `%${search}%`;
+
+  //       // Raw query to search in JSON content as well
+  //       const rawQuery = `
+  //         SELECT * FROM "StaticPage"
+  //         WHERE
+  //           LOWER(title) LIKE LOWER($1) OR
+  //           LOWER(slug) LIKE LOWER($2) OR
+  //           LOWER(content::text) LIKE LOWER($3)
+  //         ORDER BY "createdAt" DESC
+  //         LIMIT $4 OFFSET $5
+  //       `;
+
+  //       const countQuery = `
+  //         SELECT COUNT(*) as count FROM "StaticPage"
+  //         WHERE
+  //           LOWER(title) LIKE LOWER($1) OR
+  //           LOWER(slug) LIKE LOWER($2) OR
+  //           LOWER(content::text) LIKE LOWER($3)
+  //       `;
+
+  //       // Execute both queries
+  //       const [pages, countResult] = await Promise.all([
+  //         prisma.$queryRawUnsafe(rawQuery, searchTerm, searchTerm, searchTerm, take, skip),
+  //         prisma.$queryRawUnsafe(countQuery, searchTerm, searchTerm, searchTerm)
+  //       ]);
+
+  //       staticPages = pages;
+  //       total = parseInt(countResult[0].count);
+  //     } else {
+  //       // No search, use regular Prisma query
+  //       const where = {};
+
+  //       [staticPages, total] = await Promise.all([
+  //         prisma.staticPage.findMany({
+  //           where,
+  //           skip,
+  //           take,
+  //           orderBy: { createdAt: "desc" },
+  //         }),
+  //         prisma.staticPage.count({ where }),
+  //       ]);
+  //     }
+
+  //     const paginatedResponse = pagination.createPaginatedResponse(
+  //       staticPages,
+  //       req.query,
+  //       total,
+  //       {
+  //         defaultLimit: 10,
+  //         maxLimit: 200,
+  //       }
+  //     );
+
+  //     return response.success(
+  //       res,
+  //       paginatedResponse,
+  //       "Static pages retrieved successfully"
+  //     );
+  //   } catch (error) {
+  //     logger.error("Get All Static Pages error", {
+  //       error: error?.message || error,
+  //       query: req.query,
+  //     });
+  //     return response.error(
+  //       res,
+  //       "Failed to retrieve static pages",
+  //       500,
+  //       error.message
+  //     );
+  //   }
+  // }
+
   async getAllStaticPages(req, res) {
     try {
       const { page = 1, limit = 10, search } = req.query;
@@ -161,40 +272,48 @@ class StaticPageController {
       let staticPages, total;
 
       if (search) {
-        // For JSON content search, we need to use raw queries
         const searchTerm = `%${search}%`;
-        
-        // Raw query to search in JSON content as well
+
         const rawQuery = `
-          SELECT * FROM "StaticPage" 
-          WHERE 
-            LOWER(title) LIKE LOWER($1) OR 
-            LOWER(slug) LIKE LOWER($2) OR
-            LOWER(content::text) LIKE LOWER($3)
-          ORDER BY "createdAt" DESC
-          LIMIT $4 OFFSET $5
-        `;
+        SELECT * FROM "StaticPage" 
+        WHERE 
+          LOWER(title) LIKE LOWER($1) OR 
+          LOWER(slug) LIKE LOWER($2) OR
+          LOWER(content::text) LIKE LOWER($3)
+        ORDER BY "createdAt" DESC
+        LIMIT $4 OFFSET $5
+      `;
 
         const countQuery = `
-          SELECT COUNT(*) as count FROM "StaticPage" 
-          WHERE 
-            LOWER(title) LIKE LOWER($1) OR 
-            LOWER(slug) LIKE LOWER($2) OR
-            LOWER(content::text) LIKE LOWER($3)
-        `;
+        SELECT COUNT(*) as count FROM "StaticPage" 
+        WHERE 
+          LOWER(title) LIKE LOWER($1) OR 
+          LOWER(slug) LIKE LOWER($2) OR
+          LOWER(content::text) LIKE LOWER($3)
+      `;
 
-        // Execute both queries
         const [pages, countResult] = await Promise.all([
-          prisma.$queryRawUnsafe(rawQuery, searchTerm, searchTerm, searchTerm, take, skip),
-          prisma.$queryRawUnsafe(countQuery, searchTerm, searchTerm, searchTerm)
+          prisma.$queryRawUnsafe(
+            rawQuery,
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            take,
+            skip
+          ),
+          prisma.$queryRawUnsafe(
+            countQuery,
+            searchTerm,
+            searchTerm,
+            searchTerm
+          ),
         ]);
 
         staticPages = pages;
         total = parseInt(countResult[0].count);
       } else {
-        // No search, use regular Prisma query
         const where = {};
-        
+
         [staticPages, total] = await Promise.all([
           prisma.staticPage.findMany({
             where,
@@ -206,8 +325,36 @@ class StaticPageController {
         ]);
       }
 
+      // Parse JSON if needed & map translations
+      const formattedPages = staticPages.map((page) => {
+        let translatedContent = page.translatedContent;
+
+        // If coming from raw SQL, parse JSON string
+        if (typeof translatedContent === "string") {
+          try {
+            translatedContent = JSON.parse(translatedContent);
+          } catch (e) {
+            translatedContent = null;
+          }
+        }
+
+        return {
+          en: {
+            title: translatedContent?.english?.title || page.title || null,
+            content:
+              translatedContent?.english?.content || page.content || null,
+            slug: page.slug || null,
+          },
+          ar: {
+            title: translatedContent?.arabic?.title || null,
+            content: translatedContent?.arabic?.content || null,
+            slug: page.slug || null,
+          },
+        };
+      });
+
       const paginatedResponse = pagination.createPaginatedResponse(
-        staticPages,
+        formattedPages,
         req.query,
         total,
         {
@@ -300,24 +447,28 @@ class StaticPageController {
       // Handle auto-translation if OpenAI is available
       if (openaiService.isAvailable()) {
         try {
-          logger.info(`Starting auto-translation for static page: ${existingPage.title}`);
-          
+          logger.info(
+            `Starting auto-translation for static page: ${existingPage.title}`
+          );
+
           const contentToTranslate = {
             title: updateData.title || existingPage.title,
-            content: updateData.content || existingPage.content
+            content: updateData.content || existingPage.content,
           };
 
           // Prepare content for translation
-          let translationText = '';
+          let translationText = "";
           if (contentToTranslate.title) {
             translationText += `Title: ${contentToTranslate.title}\n`;
           }
           if (contentToTranslate.content) {
             // Handle content based on its type (JSON or string)
-            let contentString = '';
-            if (typeof contentToTranslate.content === 'object') {
+            let contentString = "";
+            if (typeof contentToTranslate.content === "object") {
               // If content is JSON, extract text fields for translation
-              contentString = this.extractTextFromJSON(contentToTranslate.content);
+              contentString = this.extractTextFromJSON(
+                contentToTranslate.content
+              );
             } else {
               contentString = contentToTranslate.content;
             }
@@ -329,52 +480,77 @@ class StaticPageController {
           if (translationText.trim()) {
             // Translate the content to Arabic and English
             logger.info(`📝 Content to translate: ${translationText}`);
-            const translationResult = await openaiService.translateContent(translationText, 'auto');
-            
+            const translationResult = await openaiService.translateContent(
+              translationText,
+              "auto"
+            );
+
             logger.info(`🔍 Translation result received:`, {
               success: translationResult.success,
               arabicContentLength: translationResult.arabicContent?.length || 0,
-              englishContentLength: translationResult.englishContent?.length || 0,
+              englishContentLength:
+                translationResult.englishContent?.length || 0,
               arabicContent: translationResult.arabicContent,
-              englishContent: translationResult.englishContent
+              englishContent: translationResult.englishContent,
             });
-            
+
             if (translationResult.success) {
-              const existingTranslatedContent = existingPage.translatedContent || {};
-              
+              const existingTranslatedContent =
+                existingPage.translatedContent || {};
+
               // Extract fields with detailed logging
-              const arabicTitle = this.extractTranslatedField(translationResult.arabicContent, 'Title');
-              const arabicContent = this.extractTranslatedField(translationResult.arabicContent, 'Content');
-              const englishTitle = this.extractTranslatedField(translationResult.englishContent, 'Title');
-              const englishContent = this.extractTranslatedField(translationResult.englishContent, 'Content');
-              
+              const arabicTitle = this.extractTranslatedField(
+                translationResult.arabicContent,
+                "Title"
+              );
+              const arabicContent = this.extractTranslatedField(
+                translationResult.arabicContent,
+                "Content"
+              );
+              const englishTitle = this.extractTranslatedField(
+                translationResult.englishContent,
+                "Title"
+              );
+              const englishContent = this.extractTranslatedField(
+                translationResult.englishContent,
+                "Content"
+              );
+
               logger.info(`🔎 Extracted fields:`, {
-                arabicTitle, arabicContent, englishTitle, englishContent
+                arabicTitle,
+                arabicContent,
+                englishTitle,
+                englishContent,
               });
-              
+
               updateData.translatedContent = {
                 ...existingTranslatedContent,
                 arabic: {
                   title: arabicTitle,
-                  content: arabicContent
+                  content: arabicContent,
                 },
                 english: {
                   title: englishTitle,
-                  content: englishContent
+                  content: englishContent,
                 },
                 translatedAt: translationResult.translatedAt,
-                sourceLanguage: translationResult.sourceLanguage
+                sourceLanguage: translationResult.sourceLanguage,
               };
 
-              logger.info(`✅ Successfully translated static page content for: ${existingPage.title}`);
+              logger.info(
+                `✅ Successfully translated static page content for: ${existingPage.title}`
+              );
             } else {
-              logger.warn(`⚠️ Translation failed for static page: ${existingPage.title}`, { error: translationResult.error });
+              logger.warn(
+                `⚠️ Translation failed for static page: ${existingPage.title}`,
+                { error: translationResult.error }
+              );
             }
           }
         } catch (translationError) {
-          logger.error('Translation error during static page update:', { 
+          logger.error("Translation error during static page update:", {
             error: translationError?.message || translationError,
-            pageId: id 
+            pageId: id,
           });
           // Continue with update even if translation fails
         }
@@ -435,23 +611,23 @@ class StaticPageController {
    * Helper method to extract text from JSON content
    */
   extractTextFromJSON(jsonContent) {
-    if (!jsonContent || typeof jsonContent !== 'object') return '';
-    
-    let textContent = '';
-    
+    if (!jsonContent || typeof jsonContent !== "object") return "";
+
+    let textContent = "";
+
     const extractTextRecursively = (obj) => {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
           const value = obj[key];
-          if (typeof value === 'string') {
+          if (typeof value === "string") {
             textContent += `${value} `;
-          } else if (typeof value === 'object' && value !== null) {
+          } else if (typeof value === "object" && value !== null) {
             extractTextRecursively(value);
           }
         }
       }
     };
-    
+
     extractTextRecursively(jsonContent);
     return textContent.trim();
   }
@@ -464,57 +640,84 @@ class StaticPageController {
       logger.warn(`No translated text provided for field: ${fieldName}`);
       return null;
     }
-    
+
     // Log the translated text for debugging (truncated for readability)
-    const truncatedText = translatedText.length > 500 ? translatedText.substring(0, 500) + '...' : translatedText;
-    logger.info(`Extracting field "${fieldName}" from translated text:`, { truncatedText });
-    
+    const truncatedText =
+      translatedText.length > 500
+        ? translatedText.substring(0, 500) + "..."
+        : translatedText;
+    logger.info(`Extracting field "${fieldName}" from translated text:`, {
+      truncatedText,
+    });
+
     // Try multiple regex patterns to match different response formats
     const patterns = [
       // Standard format: "FieldName: value"
-      new RegExp(`${fieldName}:\\s*(.+?)(?=\\n|$)`, 'i'),
+      new RegExp(`${fieldName}:\\s*(.+?)(?=\\n|$)`, "i"),
       // Quoted format: "FieldName: "value""
-      new RegExp(`${fieldName}:\\s*"([^"]+)"`, 'i'),
+      new RegExp(`${fieldName}:\\s*"([^"]+)"`, "i"),
       // Single quoted format: "FieldName: 'value'"
-      new RegExp(`${fieldName}:\\s*'([^']+)'`, 'i'),
+      new RegExp(`${fieldName}:\\s*'([^']+)'`, "i"),
       // With extra text: "FieldName (Arabic): value"
-      new RegExp(`${fieldName}[^:]*:\\s*(.+?)(?=\\n|$)`, 'i'),
+      new RegExp(`${fieldName}[^:]*:\\s*(.+?)(?=\\n|$)`, "i"),
       // Arabic format variations
-      new RegExp(`${fieldName}.*?:\\s*(.+?)(?=\\n|$)`, 'i'),
+      new RegExp(`${fieldName}.*?:\\s*(.+?)(?=\\n|$)`, "i"),
       // Line-by-line search (more flexible)
-      new RegExp(`^.*${fieldName}.*?:\\s*(.+?)$`, 'mi'),
+      new RegExp(`^.*${fieldName}.*?:\\s*(.+?)$`, "mi"),
       // Handle potential Unicode issues with Arabic
-      new RegExp(`${fieldName}[\\s\\u200B-\\u200D\\uFEFF]*:\\s*(.+?)(?=\\n|$)`, 'i')
+      new RegExp(
+        `${fieldName}[\\s\\u200B-\\u200D\\uFEFF]*:\\s*(.+?)(?=\\n|$)`,
+        "i"
+      ),
     ];
-    
+
     for (let i = 0; i < patterns.length; i++) {
       const regex = patterns[i];
       const match = translatedText.match(regex);
       if (match && match[1] && match[1].trim()) {
-        const extractedValue = match[1].trim().replace(/^["']|["']$/g, ''); // Remove quotes
-        if (extractedValue && extractedValue !== 'null' && extractedValue !== 'undefined') {
-          logger.info(`Successfully extracted "${fieldName}" using pattern ${i + 1}: ${extractedValue}`);
+        const extractedValue = match[1].trim().replace(/^["']|["']$/g, ""); // Remove quotes
+        if (
+          extractedValue &&
+          extractedValue !== "null" &&
+          extractedValue !== "undefined"
+        ) {
+          logger.info(
+            `Successfully extracted "${fieldName}" using pattern ${
+              i + 1
+            }: ${extractedValue}`
+          );
           return extractedValue;
         }
       }
     }
-    
+
     // If no pattern worked, try to find any line containing the field name
-    const lines = translatedText.split('\n');
+    const lines = translatedText.split("\n");
     for (const line of lines) {
-      if (line.toLowerCase().includes(fieldName.toLowerCase()) && line.includes(':')) {
-        const parts = line.split(':');
+      if (
+        line.toLowerCase().includes(fieldName.toLowerCase()) &&
+        line.includes(":")
+      ) {
+        const parts = line.split(":");
         if (parts.length >= 2) {
-          const value = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
-          if (value && value !== 'null' && value !== 'undefined') {
-            logger.info(`Successfully extracted "${fieldName}" from line: ${value}`);
+          const value = parts
+            .slice(1)
+            .join(":")
+            .trim()
+            .replace(/^["']|["']$/g, "");
+          if (value && value !== "null" && value !== "undefined") {
+            logger.info(
+              `Successfully extracted "${fieldName}" from line: ${value}`
+            );
             return value;
           }
         }
       }
     }
-    
-    logger.warn(`Could not extract field "${fieldName}" from translated text. Available content: ${truncatedText}`);
+
+    logger.warn(
+      `Could not extract field "${fieldName}" from translated text. Available content: ${truncatedText}`
+    );
     return null;
   }
 }
