@@ -107,8 +107,9 @@ class StaticPageController {
             });
 
             if (translationResult.success) {
-              pageData.translatedContent = {
-                arabic: {
+              pageData.translatedContent = [
+                {
+                  language: 'arabic',
                   title: this.extractTranslatedField(
                     translationResult.arabicContent,
                     "Title"
@@ -117,8 +118,11 @@ class StaticPageController {
                     translationResult.arabicContent,
                     "Content"
                   ),
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
                 },
-                english: {
+                {
+                  language: 'english',
                   title: this.extractTranslatedField(
                     translationResult.englishContent,
                     "Title"
@@ -127,10 +131,10 @@ class StaticPageController {
                     translationResult.englishContent,
                     "Content"
                   ),
-                },
-                translatedAt: translationResult.translatedAt,
-                sourceLanguage: translationResult.sourceLanguage,
-              };
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
+                }
+              ];
 
               logger.info(
                 `✅ Successfully translated new static page content: ${title}`
@@ -325,34 +329,10 @@ class StaticPageController {
         ]);
       }
 
-      const formattedPages = staticPages.map((page) => {
-        let translatedContent = page.translatedContent;
-
-        if (typeof translatedContent === "string") {
-          try {
-            translatedContent = JSON.parse(translatedContent);
-          } catch (e) {
-            translatedContent = null;
-          }
-        }
-
-        return {
-          english: {
-            title: translatedContent?.english?.title || page.title || null,
-            content:
-              translatedContent?.english?.content || page.content || null,
-            slug: page.slug || null,
-          },
-          arabic: {
-            title: translatedContent?.arabic?.title || null,
-            content: translatedContent?.arabic?.content || null,
-            slug: page.slug || null,
-          },
-        };
-      });
+  
 
       const paginatedResponse = pagination.createPaginatedResponse(
-        formattedPages,
+        staticPages,
         req.query,
         total,
         {
@@ -521,19 +501,22 @@ class StaticPageController {
                 englishContent,
               });
 
-              updateData.translatedContent = {
-                ...existingTranslatedContent,
-                arabic: {
+              updateData.translatedContent = [
+                {
+                  language: 'arabic',
                   title: arabicTitle,
                   content: arabicContent,
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
                 },
-                english: {
+                {
+                  language: 'english',
                   title: englishTitle,
                   content: englishContent,
-                },
-                translatedAt: translationResult.translatedAt,
-                sourceLanguage: translationResult.sourceLanguage,
-              };
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
+                }
+              ];
 
               logger.info(
                 `✅ Successfully translated static page content for: ${existingPage.title}`
