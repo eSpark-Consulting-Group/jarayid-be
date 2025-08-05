@@ -42,6 +42,7 @@ class RssSummarizationController {
       word_range_over_1000,
       gpt_model,
       category,
+      day_number,
       time_limit,
       threshold,
     } = req.body;
@@ -55,6 +56,7 @@ class RssSummarizationController {
         gpt_model,
         category,
         time_limit,
+        day_number,
         threshold,
       };
 
