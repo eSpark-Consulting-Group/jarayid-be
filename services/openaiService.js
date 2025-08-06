@@ -329,8 +329,9 @@ Requirements:
         })
       ]);
 
-      const englishContent = englishResult?.trim();
-      const arabicContent = arabicResult?.trim();
+      // Normalize newlines to ensure consistent \n\n formatting for frontend parsing
+      const englishContent = this.normalizeNewlines(englishResult?.trim());
+      const arabicContent = this.normalizeNewlines(arabicResult?.trim());
 
       // Validate translations
       if (!englishContent || englishContent.length < 10) {
@@ -495,6 +496,30 @@ ${content.substring(0, 200)}
       });
       throw error;
     }
+  }
+
+  /**
+   * Normalize newlines to ensure consistent \n\n formatting for frontend parsing
+   * @param {string} text - Text content with potentially inconsistent newlines
+   * @returns {string} Text with normalized newlines
+   */
+  normalizeNewlines(text) {
+    if (!text) return text;
+
+    // First, normalize all variations of multiple newlines to a single separator
+    let normalized = text
+      // Replace any sequence of 3+ newlines with double newlines
+      .replace(/\n{3,}/g, '\n\n')
+      // Replace single newlines that should be double (between sections)
+      .replace(/\n([A-Z][a-z]*:)/g, '\n\n$1') // Before field labels like "Title:", "Description:"
+      // Ensure proper spacing around field labels
+      .replace(/([^:\n])\n([A-Z][a-z]*:)/g, '$1\n\n$2')
+      // Clean up any remaining inconsistencies
+      .replace(/\n{3,}/g, '\n\n')
+      // Trim any leading/trailing whitespace
+      .trim();
+
+    return normalized;
   }
 
   /**
