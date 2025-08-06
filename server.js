@@ -15,6 +15,7 @@ import apiRouter from './routes/index.js';
 import { rssQueueService, aiSummaryQueueService, trialService } from './services/index.js';
 import { errorHandler } from './middleware/index.js';
 import { logError } from "./utils/logger.js";
+import { createAdminUser } from './scripts/createAdmin.js';
 
 const originalConsoleError = console.error;
 console.error = async (...args) => {
@@ -195,6 +196,15 @@ app.listen(PORT, async () => {
     try {
         await prisma.$connect();
         logger.info('Database connected');
+        
+        // Create admin user if not exists
+        try {
+            await createAdminUser();
+            logger.info('Admin user initialization completed');
+        } catch (adminError) {
+            logger.error('Admin user initialization failed:', adminError);
+            // Continue without admin creation if it fails
+        }
         
         // Initialize RSS Queue Service
         try {
