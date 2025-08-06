@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: SecureAdminPass123!
       POSTGRES_DB: jarayid
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -37,7 +37,7 @@ services:
       PORT: 3004
 
       # PostgreSQL
-      DATABASE_URL: "postgresql://postgres:password@db-jarayid:5432/jarayid?connection_limit=10&pool_timeout=10"
+      DATABASE_URL: "postgresql://jarayid_admin:SecureAdminPass123!@db-jarayid:5432/jarayid?connection_limit=10&pool_timeout=10"
 
       # JWT
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production

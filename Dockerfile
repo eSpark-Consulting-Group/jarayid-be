@@ -16,7 +16,8 @@ RUN npm install
 COPY . .
  
 # Generate Prisma client (no need for migrate in Dockerfile if you run it in docker-compose)
-RUN npx prisma generate
+RUN npx prisma generate && \
+    npx prisma migrate deploy
  
 EXPOSE 3004
 CMD ["npm", "run", "start"]
