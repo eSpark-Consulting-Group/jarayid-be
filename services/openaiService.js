@@ -30,6 +30,7 @@ class OpenAIService {
   async init() {
     const dbKey = await getApiKeyFromDB();
     const key = dbKey || process.env.OPENAI_API_KEY || OPENAI_CONFIG.apiKey;
+    console.log("OpenAI API Key:", key);
 
     if (OPENAI_CONFIG.enabled && key) {
       this.openai = new OpenAI({ apiKey: key });
