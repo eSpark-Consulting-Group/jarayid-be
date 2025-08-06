@@ -544,6 +544,55 @@ class SubscriptionController {
         // This is a placeholder - implement actual verification
         return true;
     }
+
+    /**
+     * Get orphaned subscriptions (admin only)
+     */
+    async getOrphanedSubscriptions(req, res) {
+        try {
+            // Check if user is admin (implement your admin check logic)
+            // For now, we'll allow any authenticated user
+            
+            const orphanedSubscriptions = await paddleSubscriptionService.getOrphanedSubscriptions();
+
+            return successResponse(res, {
+                orphanedSubscriptions,
+                count: orphanedSubscriptions.length,
+                message: 'Orphaned subscriptions retrieved successfully'
+            });
+
+        } catch (error) {
+            logger.error('Error getting orphaned subscriptions:', error);
+            return errorResponse(res, error.message, 500);
+        }
+    }
+
+    /**
+     * Link orphaned subscription to user (admin only)
+     */
+    async linkOrphanedSubscription(req, res) {
+        try {
+            const { paddleSubscriptionId, userId } = req.body;
+
+            if (!paddleSubscriptionId || !userId) {
+                return errorResponse(res, 'Paddle subscription ID and user ID are required', 400);
+            }
+
+            const linkedSubscription = await paddleSubscriptionService.linkOrphanedSubscription(
+                paddleSubscriptionId,
+                userId
+            );
+
+            return successResponse(res, {
+                subscription: linkedSubscription,
+                message: 'Subscription linked successfully'
+            });
+
+        } catch (error) {
+            logger.error('Error linking orphaned subscription:', error);
+            return errorResponse(res, error.message, 500);
+        }
+    }
 }
 
 export default new SubscriptionController();

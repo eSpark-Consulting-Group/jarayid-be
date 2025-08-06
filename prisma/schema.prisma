@@ -199,10 +199,10 @@ model ReadLater {
  
 model Subscription {
   id          String    @id @default(uuid())
-  userId      String
+  userId      String?
   isPremium   Boolean   @default(false)
   trialEndsAt DateTime?
- 
+
   // Paddle Integration Fields
   paddleSubscriptionId String?            @unique @db.VarChar(255)
   paddleCustomerId     String?            @db.VarChar(255)
@@ -214,27 +214,26 @@ model Subscription {
   cancelledAt          DateTime?
   pausedAt             DateTime?
   resumedAt            DateTime?
- 
+
   // Payment Information
   currency String?               @db.VarChar(3)
   amount   Float?
   interval SubscriptionInterval?
- 
+
   // Metadata
   metadata           Json?
   lastPaymentAt      DateTime?
   nextPaymentAt      DateTime?
   failedPaymentCount Int       @default(0)
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
- 
-  @@unique([userId], name: "unique_user_subscription")
+  user      User?    @relation(fields: [userId], references: [id])
+
+  // Note: Removed unique constraint on userId to allow multiple orphaned subscriptions (userId = null)
+  // Active subscriptions should still be limited to one per user through application logic
   @@map("subscriptions")
-}
- 
-model Ad {
+}model Ad {
   id        String     @id @default(uuid())
   platform  AdPlatform
   adType    AdType

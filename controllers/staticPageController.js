@@ -85,6 +85,7 @@ class StaticPageController {
             if (contentString) {
               translationText += `Content: ${contentString}\n`;
             }
+
           }
 
           if (translationText.trim()) {
@@ -107,8 +108,9 @@ class StaticPageController {
             });
 
             if (translationResult.success) {
-              pageData.translatedContent = {
-                arabic: {
+              pageData.translatedContent = [
+                {
+                  language: 'arabic',
                   title: this.extractTranslatedField(
                     translationResult.arabicContent,
                     "Title"
@@ -117,8 +119,12 @@ class StaticPageController {
                     translationResult.arabicContent,
                     "Content"
                   ),
+
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
                 },
-                english: {
+                {
+                  language: 'english',
                   title: this.extractTranslatedField(
                     translationResult.englishContent,
                     "Title"
@@ -127,10 +133,10 @@ class StaticPageController {
                     translationResult.englishContent,
                     "Content"
                   ),
-                },
-                translatedAt: translationResult.translatedAt,
-                sourceLanguage: translationResult.sourceLanguage,
-              };
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
+                }
+              ];
 
               logger.info(
                 `✅ Successfully translated new static page content: ${title}`
@@ -325,34 +331,10 @@ class StaticPageController {
         ]);
       }
 
-      const formattedPages = staticPages.map((page) => {
-        let translatedContent = page.translatedContent;
-
-        if (typeof translatedContent === "string") {
-          try {
-            translatedContent = JSON.parse(translatedContent);
-          } catch (e) {
-            translatedContent = null;
-          }
-        }
-
-        return {
-          english: {
-            title: translatedContent?.english?.title || page.title || null,
-            content:
-              translatedContent?.english?.content || page.content || null,
-            slug: page.slug || null,
-          },
-          arabic: {
-            title: translatedContent?.arabic?.title || null,
-            content: translatedContent?.arabic?.content || null,
-            slug: page.slug || null,
-          },
-        };
-      });
+  
 
       const paginatedResponse = pagination.createPaginatedResponse(
-        formattedPages,
+        staticPages,
         req.query,
         total,
         {
@@ -521,19 +503,22 @@ class StaticPageController {
                 englishContent,
               });
 
-              updateData.translatedContent = {
-                ...existingTranslatedContent,
-                arabic: {
+              updateData.translatedContent = [
+                {
+                  language: 'arabic',
                   title: arabicTitle,
                   content: arabicContent,
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
                 },
-                english: {
+                {
+                  language: 'english',
                   title: englishTitle,
                   content: englishContent,
-                },
-                translatedAt: translationResult.translatedAt,
-                sourceLanguage: translationResult.sourceLanguage,
-              };
+                  translatedAt: translationResult.translatedAt,
+                  sourceLanguage: translationResult.sourceLanguage,
+                }
+              ];
 
               logger.info(
                 `✅ Successfully translated static page content for: ${existingPage.title}`
@@ -613,12 +598,35 @@ class StaticPageController {
 
     let textContent = "";
 
+    // Special handling for FAQ structure
+    if (jsonContent.faq && Array.isArray(jsonContent.faq)) {
+      jsonContent.faq.forEach((faqItem, index) => {
+        if (faqItem.question) {
+          textContent += `FAQ Question ${index + 1}: ${faqItem.question}\n`;
+        }
+        if (faqItem.answer) {
+          textContent += `FAQ Answer ${index + 1}: ${faqItem.answer}\n`;
+        }
+      });
+      return textContent.trim();
+    }
+
+    // General recursive extraction for other JSON structures
     const extractTextRecursively = (obj) => {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
           const value = obj[key];
           if (typeof value === "string") {
             textContent += `${value} `;
+          } else if (Array.isArray(value)) {
+            // Handle arrays
+            value.forEach(item => {
+              if (typeof item === "string") {
+                textContent += `${item} `;
+              } else if (typeof item === "object" && item !== null) {
+                extractTextRecursively(item);
+              }
+            });
           } else if (typeof value === "object" && value !== null) {
             extractTextRecursively(value);
           }
@@ -647,6 +655,29 @@ class StaticPageController {
     logger.info(`Extracting field "${fieldName}" from translated text:`, {
       truncatedText,
     });
+
+    // Special handling for FAQ content
+    if (fieldName === "Content" && translatedText.includes("FAQ Question")) {
+      // Extract FAQ structure from translated text
+      const faqPattern = /FAQ Question \d+:\s*(.+?)\s*FAQ Answer \d+:\s*(.+?)(?=FAQ Question|\n|$)/gi;
+      const matches = [...translatedText.matchAll(faqPattern)];
+      
+      if (matches.length > 0) {
+        let faqContent = "";
+        matches.forEach((match, index) => {
+          const question = match[1]?.trim();
+          const answer = match[2]?.trim();
+          if (question && answer) {
+            faqContent += `Q${index + 1}: ${question}\nA${index + 1}: ${answer}\n\n`;
+          }
+        });
+        
+        if (faqContent) {
+          logger.info(`Successfully extracted FAQ content: ${faqContent.substring(0, 200)}...`);
+          return faqContent.trim();
+        }
+      }
+    }
 
     // Try multiple regex patterns to match different response formats
     const patterns = [
