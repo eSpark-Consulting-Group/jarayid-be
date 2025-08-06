@@ -168,6 +168,8 @@ class CategoryController {
                     });
                     // Continue with creation even if translation fails
                 }
+            }else {
+                logger.info('OpenAI translation service is not available, skipping auto-translation for new category');
             }
 
             if (logoData) {
