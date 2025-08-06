@@ -1,6 +1,8 @@
 # Base image with OpenSSL 1.1 support
 FROM node:20-bullseye
- 
+
+ARG DATABASE_URL
+
 # Install OpenSSL 1.1 (required for Prisma engine)
 RUN apt-get update && \
     apt-get install -y openssl libssl1.1 ca-certificates && \
@@ -11,7 +13,8 @@ WORKDIR /app
 # Install deps
 COPY package*.json ./
 RUN npm install
- 
+
+
 # Copy app code
 COPY . .
  
