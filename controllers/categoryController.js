@@ -75,6 +75,7 @@ class CategoryController {
                 description,
                 seoMeta: seoMeta || {},
                 thresholdDays: thresholdDays || 7,
+                translatedContent: null,
                 customFields: customFields || null,
                 createdById: req.user.id 
             };
