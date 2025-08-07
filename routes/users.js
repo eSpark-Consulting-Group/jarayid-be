@@ -1,5 +1,4 @@
 import { Router } from 'express';
-
 import schemas from '../schemas/index.js';
 import createValidationMiddleware from '../middleware/validate.js';
 import UserController from '../controllers/index.js';

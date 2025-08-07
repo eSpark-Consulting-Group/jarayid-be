@@ -157,11 +157,15 @@ class UserController {
             const now = new Date();
             const accountOldEnough =
               now - new Date(user.createdAt) >= 30 * 24 * 60 * 60 * 1000;
-            const hasAccessToTTS =
+
+            const isSubscribed =
               subscription.status === "premium" ||
-              subscription.status === "trial" ||
-              accountOldEnough;
-            userResponse.canUseTTS = hasAccessToTTS;
+              subscription.status === "trial";
+
+            userResponse.subscribe = isSubscribed;
+            userResponse.onemonth = accountOldEnough;
+            userResponse.canUseTTS = isSubscribed || accountOldEnough;
+
 
             return response.success(res, { user: userResponse, token }, 'User registered successfully with 7-day free trial');
         } catch (error) {
@@ -284,14 +288,18 @@ class UserController {
 
             const token = generateToken({ userId: user.id, email: user.email });
 
-            const now = new Date();
-            const accountOldEnough =
-              now - new Date(user.createdAt) >= 30 * 24 * 60 * 60 * 1000;
-            const hasAccessToTTS =
-              subscriptionInfo.status === "premium" ||
-              subscriptionInfo.status === "trial" ||
-              accountOldEnough;
-            userWithSubscription.canUseTTS = hasAccessToTTS;
+           const now = new Date();
+           const accountOldEnough =
+             now - new Date(user.createdAt) >= 30 * 24 * 60 * 60 * 1000;
+
+           const isSubscribed =
+             subscriptionInfo.status === "premium" ||
+             subscriptionInfo.status === "trial";
+
+           userWithSubscription.subscribe = isSubscribed;
+           userWithSubscription.onemonth = accountOldEnough;
+           userWithSubscription.canUseTTS = isSubscribed || accountOldEnough;
+
 
             return response.success(res, { user: userWithSubscription, token }, 'Logged in successfully');
         } catch (error) {
