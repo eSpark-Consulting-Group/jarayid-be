@@ -291,7 +291,7 @@ class UserController {
               subscriptionInfo.status === "premium" ||
               subscriptionInfo.status === "trial" ||
               accountOldEnough;
-            userResponse.canUseTTS = hasAccessToTTS;
+            userWithSubscription.canUseTTS = hasAccessToTTS;
 
             return response.success(res, { user: userWithSubscription, token }, 'Logged in successfully');
         } catch (error) {
