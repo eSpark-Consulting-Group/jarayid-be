@@ -154,6 +154,15 @@ class UserController {
                 }
             };
 
+            const now = new Date();
+            const accountOldEnough =
+              now - new Date(user.createdAt) >= 30 * 24 * 60 * 60 * 1000;
+            const hasAccessToTTS =
+              subscription.status === "premium" ||
+              subscription.status === "trial" ||
+              accountOldEnough;
+            userResponse.canUseTTS = hasAccessToTTS;
+
             return response.success(res, { user: userResponse, token }, 'User registered successfully with 7-day free trial');
         } catch (error) {
             logger.error('Signup error:', { error: error?.message || error });
@@ -274,6 +283,16 @@ class UserController {
             };
 
             const token = generateToken({ userId: user.id, email: user.email });
+
+            const now = new Date();
+            const accountOldEnough =
+              now - new Date(user.createdAt) >= 30 * 24 * 60 * 60 * 1000;
+            const hasAccessToTTS =
+              subscriptionInfo.status === "premium" ||
+              subscriptionInfo.status === "trial" ||
+              accountOldEnough;
+            userResponse.canUseTTS = hasAccessToTTS;
+
             return response.success(res, { user: userWithSubscription, token }, 'Logged in successfully');
         } catch (error) {
             logger.error('Login error:', { error: error?.message || error });
