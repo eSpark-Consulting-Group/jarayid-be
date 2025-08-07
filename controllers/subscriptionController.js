@@ -264,13 +264,21 @@ class SubscriptionController {
      */
     async getPlans(req, res) {
         try {
-            // Fetch plans from Paddle API
             const plans = await this.fetchPlansFromPaddle();
-
+            const mergedPrices = plans.flatMap((plan) =>
+              Object.values(plan.prices).map((price) => ({
+                ...price,
+                id: plan.id,
+                name: plan.name,
+                features: plan.features,
+                savings: plan.savings,
+              }))
+            );
             return successResponse(res, {
-                plans,
-                message: 'Subscription plans retrieved successfully'
+              ALL_PLANS: mergedPrices,
+              message: "Subscription plans retrieved successfully",
             });
+
 
         } catch (error) {
             logger.error('Error getting plans:', error);
