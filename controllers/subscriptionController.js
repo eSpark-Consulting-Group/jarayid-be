@@ -264,12 +264,22 @@ class SubscriptionController {
      */
     async getPlans(req, res) {
         try {
+            // const plans = await this.fetchPlansFromPaddle();
+
+            // return successResponse(res, {
+            //     plans,
+            //     message: 'Subscription plans retrieved successfully'
+            // });
+
             const plans = await this.fetchPlansFromPaddle();
             const mergedPrices = plans.flatMap((plan) =>
               Object.values(plan.prices).map((price) => ({
                 ...price,
                 id: plan.id,
                 name: plan.name,
+                description: plan.description,
+                type: plan.type,
+                status: plan.status,
                 features: plan.features,
                 savings: plan.savings,
               }))
